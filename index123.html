@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AgroGuide — Farming Guidelines</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"> 
+</head>
+<body>
+  <header>
+    <h1>AgroGuide — Farming Guidelines</h1>
+    <nav>
+      <a href="#/">Home</a>
+      <a href="#/guidelines">Guidelines</a>
+      <a href="#/calendar">Crop Calendar</a>
+      <a href="#/map">Map</a>
+      <a href="#/notes">My Notes</a>
+      <a href="#/weather">Weather</a>
+      <a id="authLink" href="#/login">Login</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div id="dashboard-content"> 
+        <div id="view">
+          <div class="grid">
+              <div>
+                  <div class="card" style="margin-bottom: 20px;">
+                      <h2>Welcome</h2>
+                      <p>AgroGuide gives practical crop guidelines, a planting calendar, a map of intervention points, and a personal notes manager.</p>
+                  </div>
+                  <div class="card" style="margin-bottom: 20px;">
+                      <h2>Quick Tips</h2>
+                      <ul>
+                          <li>Soil test before planting</li>
+                          <li>Use certified seeds</li>
+                          <li>Rotate crops annually</li>
+                      </ul>
+                  </div>
+                  <div class="card">
+                      <h2>Weather & Market</h2>
+                      <p class="muted">Search any city for live weather. Use the Weather page for full details and forecast.</p>
+                      <div class="weather-card">
+                          <div class="weather-left">
+                              <span class="weather-temp">29.0 °C</span>
+                              <div>
+                                  <input type="text" placeholder="City name" style="width: 150px; margin-bottom: 5px;">
+                                  <button>Get</button>
+                              </div>
+                        
+                      <div class="forecast-grid">
+                          <div class="forecast-item">Dec 1<br>29.0 °C</div>
+                          <div class="forecast-item">Dec 2<br>27.8 °C</div>
+                          <div class="forecast-item">Dec 3<br>26.7 °C</div>
+                      </div>
+                  </div>
+              </div>
+              <div>
+                  <div class="card" style="margin-bottom: 20px;">
+                      <h2>Map Snapshot</h2>
+                      <div id="map"></div>
+                      <p class="muted">Markers show demo farm locations; click Map page for full features.</p>
+                  </div>
+                  <div class="card">
+                      <h2>Get Started</h2>
+                      <ol>
+                          <li>Login (simulate)</li>
+                          <li>Explore guidelines</li>
+                          <li>Add notes & sample data</li>
+                      </ol>
+                  </div>
+              </div>
+          </div>
+        </div>
+    </div>
+  </main>
+
+  <section id="landing-hero">
+    <div class="hero-content">
+        <h1>Cultivate Your Future. Harvest Knowledge.</h1>
+        <p>Your comprehensive guide to effective farming practices and real-time agricultural data.</p>
+        <button id="getStartedBtn">Get Started Now</button>
+    </div>
+  </section>
+
+  <footer>
+    <div class="muted">
+      <strong>SDG 2 — Zero Hunger:
+      </strong> <b>AgroGuide</b>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <script src="script.js"></script>
+</body>
+</html>

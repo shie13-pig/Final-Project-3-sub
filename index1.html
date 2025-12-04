@@ -1,0 +1,1407 @@
+html (<!doctype html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8" />
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>AgroGuide — Farming Guidelines & Tools</title>
+
+ 
+
+  <!-- Styles -->
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <link rel="stylesheet" href="styles.css" />
+
+
+
+</head>
+
+<body>
+
+  <header>
+
+    <h1>AgroGuide — Farming Guidelines & Tools</h1>
+
+    <nav>
+
+      <a href="#/">Home</a>
+
+      <a href="#/guidelines">Guidelines</a>
+
+      <a href="#/calendar">Crop Calendar</a>
+
+      <a href="#/map">Map</a>
+
+      <a href="#/notes">My Notes</a>
+
+      <a href="#/weather">Weather</a>
+
+      <a id="authLink" href="#/login">Login</a>
+
+    </nav>
+
+  </header>
+
+
+
+  <main class="container">
+
+    <div id="view"></div>
+
+  </main>
+
+
+
+  <footer>
+
+    <div class="muted">
+
+     <strong>SDG 2 — Zero Hunger:
+
+     </strong> <b>AgroGuide</b>
+
+    </div>
+
+  </footer>
+
+
+
+  <!-- Dependencies -->
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+ 
+
+  <!-- Custom Script -->
+
+  <script src="script.js"></script>
+
+</body>
+
+</html>
+
+) css(:root {
+
+  --accent: #2f9e44;
+
+  --bg: #f7f9fb;
+
+  --card: #ffffff;
+
+}
+
+
+
+body {
+
+  font-family: Inter, system-ui, Segoe UI, Arial;
+
+  margin: 0;
+
+  background: var(--bg);
+
+  color: #0b1726;
+
+}
+
+
+
+header {
+
+  background: linear-gradient(90deg,#0ea5a8, #16a34a);
+
+  color: white;
+
+  padding: 12px 18px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+}
+
+
+
+header h1 {
+
+  font-size: 1.1rem;
+
+  margin: 0;
+
+}
+
+
+
+nav a {
+
+  color: rgba(255,255,255,0.95);
+
+  margin-left: 12px;
+
+  text-decoration: none;
+
+  font-weight: 600;
+
+}
+
+
+
+.container {
+
+  max-width: 1100px;
+
+  margin: 18px auto;
+
+  padding: 12px;
+
+}
+
+
+
+.grid {
+
+  display: grid;
+
+  grid-template-columns: 1fr 320px;
+
+  gap: 18px;
+
+}
+
+
+
+.card {
+
+  background: var(--card);
+
+  padding: 14px;
+
+  border-radius: 10px;
+
+  box-shadow: 0 6px 18px rgba(11,23,38,0.06);
+
+}
+
+
+
+.small-cards {
+
+  display: flex;
+
+  gap: 12px;
+
+  margin-bottom: 12px;
+
+}
+
+
+
+.small-cards .card {
+
+  flex: 1;
+
+  padding: 10px;
+
+}
+
+
+
+#map {
+
+  height: 360px;
+
+  border-radius: 8px;
+
+}
+
+
+
+footer {
+
+  max-width: 1100px;
+
+  margin: 12px auto;
+
+  text-align: center;
+
+  color: #6b7280;
+
+}
+
+
+
+button {
+
+  background: var(--accent);
+
+  color: white;
+
+  border: 0;
+
+  padding: 8px 12px;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+}
+
+
+
+input, select, textarea {
+
+  padding: 8px;
+
+  border-radius: 6px;
+
+  border: 1px solid #e6eef3;
+
+  width: 100%;
+
+  box-sizing: border-box;
+
+}
+
+
+
+.hidden { display: none; }
+
+
+
+.note-item {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  padding: 8px;
+
+  border-radius: 6px;
+
+  border: 1px dashed #e6eef3;
+
+  margin-bottom: 8px;
+
+}
+
+
+
+.muted { color: #6b7280; }
+
+
+
+.weather-card {
+
+  display: flex;
+
+  gap: 12px;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+}
+
+
+
+.weather-left { display: flex; gap: 12px; align-items: center; }
+
+
+
+.weather-temp { font-size: 1.6rem; font-weight: 700; }
+
+
+
+.forecast-grid { display: flex; gap: 8px; margin-top: 10px; }
+
+
+
+.forecast-item {
+
+  flex: 1;
+
+  background: #f3f7f5;
+
+  padding: 8px;
+
+  border-radius: 8px;
+
+  text-align: center;
+
+}
+
+
+
+@media(max-width:900px){
+
+  .grid { grid-template-columns: 1fr; }
+
+  .small-cards { flex-direction: column; }
+
+}
+
+)js(/* ----------------------------- CONFIG / WEATHER API ----------------------------- */
+
+const WEATHER_API_KEY = "36969dd54b3df2a4e17f7731a1903fcd";
+
+
+
+/* ----------------------------- Simple SPA Router ----------------------------- */
+
+const routes = {
+
+  '/': renderHome,
+
+  '/guidelines': renderGuidelines,
+
+  '/calendar': renderCalendar,
+
+  '/map': renderMapPage,
+
+  '/notes': renderNotes,
+
+  '/login': renderLogin,
+
+  '/weather': renderWeatherPage
+
+};
+
+
+
+function navigate() {
+
+  const path = location.hash.replace('#','') || '/';
+
+  const view = routes[path] || renderNotFound;
+
+  document.getElementById('view').innerHTML = '';
+
+  view();
+
+  updateAuthLink();
+
+}
+
+
+
+window.addEventListener('hashchange', navigate);
+
+window.addEventListener('load', navigate);
+
+
+
+/* ----------------------------- Auth (simulation) ----------------------------- */
+
+function isLoggedIn() { return !!localStorage.getItem('agro_session'); }
+
+
+
+function updateAuthLink() {
+
+  const a = document.getElementById('authLink');
+
+  if (isLoggedIn()) {
+
+    a.textContent = 'Logout';
+
+    a.href = '#/';
+
+    a.onclick = () => { localStorage.removeItem('agro_session'); navigate(); }
+
+  } else {
+
+    a.textContent = 'Login';
+
+    a.href = '#/login';
+
+    a.onclick = null;
+
+  }
+
+}
+
+
+
+/* ----------------------------- Pages ----------------------------- */
+
+/* ----------------------------- Pages ----------------------------- */
+
+  function renderHome(){
+
+    const el = document.getElementById('view');
+
+    el.innerHTML = `
+
+      <div class="grid">
+
+        <div>
+
+          <div class="card small-cards">
+
+            <div class="card">
+
+              <h3>Welcome</h3>
+
+              <p class="muted">AgroGuide gives practical crop guidelines, a planting calendar, a map of intervention points, and a personal notes manager.</p>
+
+            </div>
+
+            <div class="card">
+
+              <h3>Quick Tips</h3>
+
+              <ul class="muted"><li>Soil test before planting</li><li>Use certified seeds</li><li>Rotate crops annually</li></ul>
+
+            </div>
+
+          </div>
+
+
+
+          <div class="card">
+
+            <h3>Weather & Market</h3>
+
+            <p class="muted">Search any city for live weather. Use the Weather page for full details and forecast.</p>
+
+
+
+            <div style="display:flex;gap:12px;margin-top:8px">
+
+              <div class="card weather-card" style="flex:1">
+
+                <div class="weather-left">
+
+                  <div>
+
+                    <img id="homeWeatherIcon" src="" alt="" style="width:64px;height:64px;display:block" />
+
+                  </div>
+
+                  <div>
+
+                    <div id="homeWeatherLocation" class="muted">Manila, PH (demo)</div>
+
+                    <div class="weather-temp" id="homeWeatherTemp">-- °C</div>
+
+                    <div id="homeWeatherDesc" class="muted">--</div>
+
+                  </div>
+
+                </div>
+
+                <div style="width:120px">
+
+                  <input id="homeCityInput" placeholder="City name" style="margin-bottom:8px" />
+
+                  <button id="homeGetWeatherBtn">Get</button>
+
+                </div>
+
+              </div>
+
+
+
+              <div class="card" style="flex:1;text-align:center">
+
+                <strong id="marketPrice">Rice: ₱30/kg</strong><div class="muted">Market price (sample)</div>
+
+              </div>
+
+            </div>
+
+
+
+            <div id="homeForecast" class="forecast-grid" style="margin-top:12px"></div>
+
+
+
+          </div>
+
+
+
+          <div class="card" id="chartCard">
+
+            <h3>Planting Calendar (preview)</h3>
+
+            <canvas id="plantChart"></canvas>
+
+          </div>
+
+        </div>
+
+
+
+        <aside>
+
+          <div class="card">
+
+            <h3>Map Snapshot</h3>
+
+            <div id="map" style="height:220px"></div>
+
+            <p class="muted" style="margin-top:8px">Markers show demo farm locations; click Map page for full features.</p>
+
+          </div>
+
+
+
+          <div class="card" style="margin-top:12px">
+
+            <h3>Get Started</h3>
+
+            <ol class="muted"><li>Login (simulate)</li><li>Explore guidelines</li><li>Add notes & sample data</li></ol>
+
+          </div>
+
+        </aside>
+
+      </div>
+
+    `;
+
+
+
+    // init chart
+
+    const ctx = document.getElementById('plantChart').getContext('2d');
+
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    const data = {
+
+      labels: months,
+
+      datasets: [{label:'Rice planting suitability (score)', data:[2,3,4,6,8,9,7,5,4,3,2,2], tension:0.3, fill:false}]
+
+    };
+
+    window.plantChart = new Chart(ctx, {type:'line', data, options:{responsive:true}});
+
+
+
+    // init small map snapshot
+
+    initSmallMap('map');
+
+
+
+    // WEATHER: init home weather with default city (Manila)
+
+    document.getElementById('homeGetWeatherBtn').onclick = async () => {
+
+      const city = document.getElementById('homeCityInput').value.trim();
+
+      if(!city) return alert('Enter a city');
+
+      await updateHomeWeather(city);
+
+    };
+
+    // load default
+
+    updateHomeWeather('Manila');
+
+  }
+
+
+
+  function renderGuidelines(){
+
+    const el = document.getElementById('view');
+
+    el.innerHTML = `
+
+      <div class="card">
+
+        <h2>Agricultural Guidelines — Quick Reference</h2>
+
+        <p class="muted">These are practical, general guidelines. Adapt to local agroecological conditions.</p>
+
+        <h3>Soil Management</h3>
+
+        <ul class="muted"><li>Perform soil tests (pH, NPK) before major inputs.</li><li>Use organic matter/compost to improve structure.</li><li>Practice contour planting and terracing where needed.</li></ul>
+
+
+
+        <h3>Seed & Planting</h3>
+
+        <ul class="muted"><li>Use certified and drought-tolerant varieties when appropriate.</li><li>Seed spacing and depth per crop (see crop profiles).</li></ul>
+
+
+
+        <h3>Pest & Disease Management</h3>
+
+        <ul class="muted"><li>Monitor weekly; use pheromone traps for early detection.</li><li>Prefer IPM: cultural + biological controls before chemical use.</li></ul>
+
+
+
+        <h3>Water & Irrigation</h3>
+
+        <ul class="muted"><li>Apply irrigation according to crop stage; avoid overwatering.</li><li>Consider drip irrigation for water efficiency.</li></ul>
+
+
+
+        <h3>Crop Rotation & Soil Health</h3>
+
+        <ul class="muted"><li>Rotate legumes with cereals to restore nitrogen.</li><li>Include cover crops to prevent erosion and improve organic matter.</li></ul>
+
+
+
+        <h3>Postharvest</h3>
+
+        <ul class="muted"><li>Dry crops to proper moisture before storage; use improved storage bags.</li><li>Clean and sort product; follow market standards.</li></ul>
+
+      </div>
+
+    `;
+
+  }
+
+
+
+  function renderCalendar(){
+
+    if(!guardAuth()) return;
+
+    const el = document.getElementById('view');
+
+    el.innerHTML = `
+
+      <div class="card">
+
+        <h2>Crop Calendar & Planner</h2>
+
+        <p class="muted">Interactive planner: add crops & expected planting months; chart updates.</p>
+
+        <div style="display:flex;gap:12px;margin-top:12px">
+
+          <div style="flex:1">
+
+            <label>Crop name</label>
+
+            <input id="cropName" placeholder="e.g., Rice">
+
+            <label style="margin-top:8px">Start month (1-12)</label>
+
+            <input id="startMonth" type="number" min="1" max="12" value="6">
+
+            <label style="margin-top:8px">Duration (months)</label>
+
+            <input id="duration" type="number" min="1" max="12" value="4">
+
+            <div style="margin-top:8px"><button id="addCropBtn">Add to calendar</button></div>
+
+          </div>
+
+          <div style="flex:1">
+
+            <canvas id="calendarChart"></canvas>
+
+          </div>
+
+        </div>
+
+        <div style="margin-top:12px" id="cropList"></div>
+
+      </div>
+
+    `;
+
+
+
+    const chartCtx = document.getElementById('calendarChart').getContext('2d');
+
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    const baseData = new Array(12).fill(0);
+
+    window.calendarChart = new Chart(chartCtx, {type:'bar', data:{labels:months,datasets:[{label:'Active crop count',data:baseData}]}, options:{responsive:true}});
+
+
+
+    document.getElementById('addCropBtn').onclick = () => {
+
+      const name = document.getElementById('cropName').value.trim();
+
+      const start = parseInt(document.getElementById('startMonth').value);
+
+      const dur = parseInt(document.getElementById('duration').value);
+
+      if(!name || isNaN(start)||isNaN(dur)) return alert('Fill fields');
+
+      addPlannerCrop({name,start,dur});
+
+    };
+
+    renderPlannerList();
+
+  }
+
+
+
+  function renderMapPage(){
+
+    const el = document.getElementById('view');
+
+    el.innerHTML = `
+
+      <div class="card">
+
+        <h2>Map Explorer</h2>
+
+        <p class="muted">Explore farm points of interest; click markers to view details.</p>
+
+        <div id="fullMap" style="height:520px;margin-top:8px;border-radius:8px"></div>
+
+      </div>
+
+    `;
+
+    initFullMap('fullMap');
+
+  }
+
+
+
+  function renderNotes(){
+
+    if(!guardAuth()) return;
+
+    const el = document.getElementById('view');
+
+    el.innerHTML = `
+
+      <div class="card">
+
+        <h2>My Notes</h2>
+
+        <p class="muted">Personal notes — stored locally in your browser.</p>
+
+        <div style="display:flex;gap:12px">
+
+          <div style="flex:1">
+
+            <label>Title</label>
+
+            <input id="noteTitle">
+
+            <label style="margin-top:8px">Note</label>
+
+            <textarea id="noteBody" rows="6"></textarea>
+
+            <div style="margin-top:8px"><button id="saveNote">Save Note</button></div>
+
+          </div>
+
+          <div style="width:360px">
+
+            <h4>Saved Notes</h4>
+
+            <div id="notesList"></div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    `;
+
+    document.getElementById('saveNote').onclick = saveNote;
+
+    renderNotesList();
+
+  }
+
+
+
+  function renderLogin(){
+
+    const el = document.getElementById('view');
+
+    if(isLoggedIn()) { el.innerHTML = `<div class="card"><h3>Already logged in</h3><p class="muted">You are logged in. Use the nav to continue.</p></div>`; return; }
+
+    el.innerHTML = `
+
+      <div class="card" style="max-width:520px;margin:0 auto">
+
+        <h2>Login (demo)</h2>
+
+        <p class="muted">Enter any username and password to simulate login.</p>
+
+        <label>Username</label>
+
+        <input id="u_name">
+
+        <label style="margin-top:8px">Password</label>
+
+        <input id="u_pass" type="password">
+
+        <div style="margin-top:8px"><button id="doLogin">Login</button></div>
+
+      </div>
+
+    `;
+
+    document.getElementById('doLogin').onclick = () => {
+
+      const u = document.getElementById('u_name').value.trim();
+
+      const p = document.getElementById('u_pass').value.trim();
+
+      if(!u || !p) return alert('Enter credentials');
+
+      localStorage.setItem('agro_session', JSON.stringify({user:u,at:Date.now()}));
+
+      navigate();
+
+    };
+
+  }
+
+
+
+  function renderNotFound(){ document.getElementById('view').innerHTML = '<div class="card"><h3>Page not found</h3></div>'; }
+
+
+
+  /* ----------------------------- Weather functions ----------------------------- */
+
+
+
+  async function fetchCurrentWeather(city){
+
+    const key = WEATHER_API_KEY;
+
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${key}&units=metric`;
+
+    const resp = await fetch(url);
+
+    if(!resp.ok) throw new Error('City not found');
+
+    return resp.json();
+
+  }
+
+
+
+  async function fetchForecast(city){
+
+    const key = WEATHER_API_KEY;
+
+    // 3-hour forecast for 5 days
+
+    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${key}&units=metric`;
+
+    const resp = await fetch(url);
+
+    if(!resp.ok) throw new Error('Forecast not available');
+
+    return resp.json();
+
+  }
+
+
+
+  // update the small home card and open a tiny forecast preview
+
+  async function updateHomeWeather(city){
+
+    const iconEl = document.getElementById('homeWeatherIcon');
+
+    const locEl = document.getElementById('homeWeatherLocation');
+
+    const tempEl = document.getElementById('homeWeatherTemp');
+
+    const descEl = document.getElementById('homeWeatherDesc');
+
+    const forecastContainer = document.getElementById('homeForecast');
+
+    try{
+
+      locEl.textContent = 'Loading...';
+
+      tempEl.textContent = '-- °C';
+
+      descEl.textContent = '';
+
+      iconEl.src = '';
+
+      forecastContainer.innerHTML = '';
+
+
+
+      const current = await fetchCurrentWeather(city);
+
+      const forecast = await fetchForecast(city);
+
+
+
+      const icon = current.weather[0].icon;
+
+      const iconUrl = `https://openweathermap.org/img/wn/${icon}@2x.png`;
+
+      iconEl.src = iconUrl;
+
+      iconEl.alt = current.weather[0].description;
+
+
+
+      locEl.textContent = `${current.name}, ${current.sys.country}`;
+
+      tempEl.textContent = `${current.main.temp.toFixed(1)} °C`;
+
+      descEl.textContent = current.weather[0].description;
+
+
+
+      // build a small 3-day forecast preview (pick noon entries or first three unique dates)
+
+      const preview = pickDailyForecasts(forecast.list, 3);
+
+      forecastContainer.innerHTML = preview.map(p => `
+
+        <div class="forecast-item">
+
+          <div><strong>${p.dateLabel}</strong></div>
+
+          <img src="https://openweathermap.org/img/wn/${p.icon}@2x.png" alt="${p.desc}" style="width:48px;height:48px;display:block;margin:6px auto" />
+
+          <div>${p.temp.toFixed(1)} °C</div>
+
+          <div class="muted" style="font-size:0.9rem">${p.desc}</div>
+
+        </div>
+
+      `).join('');
+
+
+
+    }catch(err){
+
+      locEl.textContent = 'Error';
+
+      descEl.textContent = err.message;
+
+      tempEl.textContent = '-- °C';
+
+      forecastContainer.innerHTML = `<div class="muted">Forecast unavailable</div>`;
+
+    }
+
+  }
+
+
+
+  // choose N daily forecast snapshots from 3-hour list: prefer 12:00 entries
+
+  function pickDailyForecasts(list, n){
+
+    const picked = [];
+
+    const seenDates = new Set();
+
+    for(const item of list){
+
+      const dt = new Date(item.dt * 1000);
+
+      const dateStr = dt.toISOString().slice(0,10);
+
+      // prefer entries at 12:00:00
+
+      const hour = dt.getUTCHours(); // note: forecast times are UTC
+
+      // We'll accept first noon entries (12:00 UTC) or fallback to first of the date
+
+      if(seenDates.has(dateStr)) continue;
+
+      if(hour === 12 || picked.length === 0){ // try to take noon, but ensure we get entries
+
+        picked.push({
+
+          dateLabel: dt.toLocaleDateString(undefined, {month:'short', day:'numeric'}),
+
+          temp: item.main.temp,
+
+          icon: item.weather[0].icon,
+
+          desc: item.weather[0].description
+
+        });
+
+        seenDates.add(dateStr);
+
+      }
+
+      if(picked.length >= n) break;
+
+    }
+
+    // if still less than n, fill from unique dates
+
+    if(picked.length < n){
+
+      for(const item of list){
+
+        const dt = new Date(item.dt * 1000);
+
+        const dateStr = dt.toISOString().slice(0,10);
+
+        if(seenDates.has(dateStr)) continue;
+
+        picked.push({
+
+          dateLabel: dt.toLocaleDateString(undefined, {month:'short', day:'numeric'}),
+
+          temp: item.main.temp,
+
+          icon: item.weather[0].icon,
+
+          desc: item.weather[0].description
+
+        });
+
+        seenDates.add(dateStr);
+
+        if(picked.length >= n) break;
+
+      }
+
+    }
+
+    return picked.slice(0,n);
+
+  }
+
+
+
+  function renderWeatherPage(){
+
+    const el = document.getElementById('view');
+
+    el.innerHTML = `
+
+      <div class="card">
+
+        <h2>Weather — full details & forecast</h2>
+
+        <p class="muted">Search any city for current weather and a multi-day forecast.</p>
+
+
+
+        <div style="display:flex;gap:12px;margin-top:12px">
+
+          <div style="flex:1;max-width:420px">
+
+            <label>City name</label>
+
+            <input id="weatherCityInput" placeholder="e.g., Manila">
+
+            <div style="margin-top:8px"><button id="weatherSearchBtn">Search</button></div>
+
+
+
+            <div id="weatherResult" style="margin-top:12px"></div>
+
+          </div>
+
+          <div style="flex:1">
+
+            <div id="weatherFullCard" class="card" style="background:#fbfbfb;color:#111">
+
+              <div id="weatherFullContent" class="muted">Search a city to load weather.</div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    `;
+
+
+
+    document.getElementById('weatherSearchBtn').onclick = async () => {
+
+      const city = document.getElementById('weatherCityInput').value.trim();
+
+      if(!city) return alert('Enter a city name');
+
+      await showFullWeather(city);
+
+    };
+
+    // Optionally preload Manila
+
+    // showFullWeather('Manila');
+
+  }
+
+
+
+  async function showFullWeather(city){
+
+    const resultDiv = document.getElementById('weatherResult');
+
+    const fullContent = document.getElementById('weatherFullContent');
+
+    resultDiv.innerHTML = 'Loading...'; fullContent.innerHTML = 'Loading...';
+
+    try{
+
+      const current = await fetchCurrentWeather(city);
+
+      const forecast = await fetchForecast(city);
+
+
+
+      // build full UI
+
+      const icon = current.weather[0].icon;
+
+      const iconUrl = `https://openweathermap.org/img/wn/${icon}@2x.png`;
+
+      const currentHtml = `
+
+        <h3 style="margin-top:0">${current.name}, ${current.sys.country}</h3>
+
+        <div style="display:flex;gap:12px;align-items:center">
+
+          <img src="${iconUrl}" alt="${current.weather[0].description}" style="width:96px;height:96px" />
+
+          <div>
+
+            <div style="font-size:1.6rem;font-weight:700">${current.main.temp.toFixed(1)} °C</div>
+
+            <div class="muted">${current.weather[0].description}</div>
+
+            <div style="margin-top:8px">Humidity: ${current.main.humidity}%</div>
+
+            <div>Wind: ${current.wind.speed} m/s</div>
+
+          </div>
+
+        </div>
+
+      `;
+
+
+
+      // forecast: pick next 3 unique dates
+
+      const daily = pickDailyForecasts(forecast.list, 4); // next 4 (incl today)
+
+      const forecastHtml = `
+
+        <h4 style="margin-bottom:6px">Forecast</h4>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+
+          ${daily.map(d => `
+
+            <div style="min-width:110px;background:#fff;padding:8px;border-radius:8px;margin:4px;text-align:center">
+
+              <div style="font-weight:700">${d.dateLabel}</div>
+
+              <img src="https://openweathermap.org/img/wn/${d.icon}@2x.png" alt="${d.desc}" style="width:56px;height:56px"/>
+
+              <div>${d.temp.toFixed(1)} °C</div>
+
+              <div class="muted" style="font-size:0.9rem">${d.desc}</div>
+
+            </div>
+
+          `).join('')}
+
+        </div>
+
+      `;
+
+
+
+      resultDiv.innerHTML = currentHtml + forecastHtml;
+
+      // also render a simple full card on the right
+
+      fullContent.innerHTML = currentHtml + `<div style="margin-top:8px">${forecastHtml}</div>`;
+
+
+
+      // store last searched city for dashboard quick card convenience
+
+      localStorage.setItem('agro_last_weather_city', city);
+
+
+
+    }catch(err){
+
+      resultDiv.innerHTML = `<div class="muted">Error: ${err.message}</div>`;
+
+      fullContent.innerHTML = `<div class="muted">Error: ${err.message}</div>`;
+
+    }
+
+  }
+
+
+
+  /* ----------------------------- Map helpers ----------------------------- */
+
+  function initSmallMap(id){
+
+    const map = L.map(id, {attributionControl:false}).setView([14.6,120.98], 11);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    const sample = [{name:'Demo Farm A',lat:14.6,lng:120.98,notes:'Rice farm'}, {name:'Demo Farm B',lat:14.63,lng:120.95,notes:'Vegetable garden'}];
+
+    sample.forEach(s => L.marker([s.lat,s.lng]).addTo(map).bindPopup(`<strong>${s.name}</strong><br>${s.notes}`));
+
+  }
+
+
+
+  function initFullMap(id){
+
+    const map = L.map(id).setView([14.6,120.98], 11);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    // load markers from sample or localStorage
+
+    const points = loadSamplePoints();
+
+    points.forEach(p => L.marker([p.lat,p.lng]).addTo(map).bindPopup(`<strong>${p.name}</strong><br>${p.desc}`));
+
+  }
+
+
+
+  function loadSamplePoints(){
+
+    const stored = localStorage.getItem('agro_points');
+
+    if(stored) return JSON.parse(stored);
+
+    const sample = [
+
+      {name:'Farm A',lat:14.6,lng:120.98,desc:'Demo rice farm'},
+
+      {name:'Farm B',lat:14.63,lng:120.95,desc:'Demo vegetable plot'},
+
+      {name:'Cooperative Center',lat:14.58,lng:120.99,desc:'Seed distribution point'}
+
+    ];
+
+    localStorage.setItem('agro_points', JSON.stringify(sample));
+
+    return sample;
+
+  }
+
+
+
+  /* ----------------------------- Notes (CRUD in localStorage) ----------------------------- */
+
+  function saveNote(){
+
+    const title = document.getElementById('noteTitle').value.trim();
+
+    const body = document.getElementById('noteBody').value.trim();
+
+    if(!title || !body) return alert('Fill title and note');
+
+    const notes = JSON.parse(localStorage.getItem('agro_notes')||'[]');
+
+    notes.push({id:Date.now(),title,body,at:new Date().toISOString()});
+
+    localStorage.setItem('agro_notes', JSON.stringify(notes));
+
+    document.getElementById('noteTitle').value=''; document.getElementById('noteBody').value='';
+
+    renderNotesList();
+
+  }
+
+  function renderNotesList(){
+
+    const list = document.getElementById('notesList');
+
+    if(!list) return;
+
+    const notes = JSON.parse(localStorage.getItem('agro_notes')||'[]');
+
+    list.innerHTML = notes.map(n => `
+
+      <div class="note-item"><div><strong>${escapeHtml(n.title)}</strong><div class="muted" style="font-size:0.9rem">${new Date(n.at).toLocaleString()}</div></div>
+
+      <div><button onclick="viewNote(${n.id})">View</button> <button onclick="deleteNote(${n.id})" style="background:#ef4444">Del</button></div></div>
+
+    `).join('') || '<div class="muted">No notes yet</div>';
+
+  }
+
+  window.viewNote = function(id){
+
+    const notes = JSON.parse(localStorage.getItem('agro_notes')||'[]');
+
+    const n = notes.find(x=>x.id===id); if(!n) return alert('Not found');
+
+    alert(`${n.title}\n\n${n.body}`);
+
+  }
+
+  window.deleteNote = function(id){
+
+    if(!confirm('Delete note?')) return;
+
+    let notes = JSON.parse(localStorage.getItem('agro_notes')||'[]');
+
+    notes = notes.filter(x=>x.id!==id);
+
+    localStorage.setItem('agro_notes', JSON.stringify(notes));
+
+    renderNotesList();
+
+  }
+
+
+
+  /* ----------------------------- Planner (simple) ----------------------------- */
+
+  function getPlanner(){ return JSON.parse(localStorage.getItem('agro_planner')||'[]'); }
+
+  function setPlanner(v){ localStorage.setItem('agro_planner', JSON.stringify(v)); }
+
+  function addPlannerCrop(c){ const p=getPlanner(); p.push(c); setPlanner(p); renderPlannerList(); updateCalendarChart(); }
+
+  function renderPlannerList(){ const el = document.getElementById('cropList'); if(!el) return; const p=getPlanner(); el.innerHTML = p.map((c,i)=>`<div class="note-item"><div><strong>${c.name}</strong><div class="muted">Start ${c.start}, ${c.dur} months</div></div><div><button onclick="removePlanner(${i})">Remove</button></div></div>`).join('')||'<div class="muted">No crops planned</div>' }
+
+  window.removePlanner = function(i){ const p=getPlanner(); p.splice(i,1); setPlanner(p); renderPlannerList(); updateCalendarChart(); }
+
+  function updateCalendarChart(){ const p=getPlanner(); const counts = new Array(12).fill(0); p.forEach(c=>{ for(let m=0;m<c.dur;m++){ const idx = (c.start-1 + m) % 12; counts[idx]++; }}); if(window.calendarChart){ window.calendarChart.data.datasets[0].data = counts; window.calendarChart.update(); } }
+
+
+
+  /* ----------------------------- Utility ----------------------------- */
+
+  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+
+
+  function guardAuth(){ if(!isLoggedIn()){ alert('Please login to access this page'); location.hash = '#/login'; return false } return true }
