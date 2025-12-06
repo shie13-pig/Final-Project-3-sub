@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Farm System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        /* Full-screen corn background */
+        body {
+            background: url('ChatGPT Image Dec 4, 2025, 01_18_40 PM.png') no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Centered login card */
+        #login-card {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 40px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            margin: 120px auto;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
+        }
+
+        #login-card h2 {
+            margin-bottom: 20px;
+            color: #2E7D32;
+        }
+
+        input { 
+            width: 90%; 
+            padding: 12px; 
+            margin: 10px 0; 
+            font-size: 16px;
+            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        button { 
+            padding: 12px 20px; 
+            font-size: 16px; 
+            border:none; 
+            border-radius:8px; 
+            cursor:pointer; 
+            background-color: rgba(46,125,50,0.8); 
+            color: white; 
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: rgba(27,94,32,0.8);
+        }
+
+        /* Navbar */
+        nav {
+            display: flex;
+            justify-content: center;
+            background: rgba(255,255,255,0.5);
+            padding: 10px;
+            gap: 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            flex-wrap: wrap;
+        }
+
+        nav a, nav button {
+            text-decoration: none;
+            color: #2E7D32;
+            font-weight: bold;
+            background: rgba(255,255,255,0.3);
+            border: none;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: 0.3s;
+        }
+
+        nav a:hover, nav button:hover {
+            background: rgba(46,125,50,0.3);
+        }
+
+        /* Sections */
+        section {
+            display: none;
+            padding: 20px;
+            background: rgba(255,255,255,0.5);
+            margin: 20px auto;
+            max-width: 900px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        h1,h2 { text-align:center; }
+
+        /* Chart and map scaling */
+        #chart-container { 
+            width: 100%; 
+            height: 400px; 
+            background: rgba(255,255,255,0.3); 
+            border-radius: 10px; 
+            padding: 10px;
+        }
+
+        #map { 
+            width: 100%; 
+            height: 400px; 
+            background: rgba(255,255,255,0.3); 
+            border-radius: 10px;
+        }
+
+        /* Table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        table, th, td {
+            border: 1px solid rgba(46,125,50,0.6);
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media(max-width:600px){
+            #login-card { margin:50px auto; padding:30px; }
+            #chart-container, #map { height: 250px; }
+            table th, table td { font-size:12px; padding:6px; }
+            nav { gap:10px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN SECTION -->
+<section id="login">
+    <div id="login-card">
+        <h2>Empowering Farmers</h2>
+        <input id="user" placeholder="Username">
+        <input id="pass" type="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <p id="err" style="color:red"></p>
+    </div>
+</section>
+
+<!-- NAVBAR -->
+<nav id="nav" style="display:none;">
+    <a href="#" onclick="showSection('home')">Home</a>
+    <a href="#" onclick="showSection('about')">About</a>
+    <a href="#" onclick="showSection('dashboard')">Dashboard</a>
+    <a href="#" onclick="showSection('map')">Map</a>
+    <a href="#" onclick="showSection('weather')">Weather</a>
+    <a href="#" onclick="showSection('records')">Records</a>
+    <button onclick="logout()">Logout</button>
+</nav>
+
+<!-- HOME -->
+<section id="home">
+    <h1>Welcome to Farm System</h1>
+    <p style="text-align:center;">Track your crops, view the weather, and manage your farm easily.</p>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+    <h1>About This System</h1>
+    <p style="text-align:center;">A simple and responsive farm management system to help farmers organize and track their crops and harvest efficiently.</p>
+</section>
+
+<!-- DASHBOARD -->
+<section id="dashboard">
+    <h1>Dashboard</h1>
+    <div id="chart-container"><canvas id="myChart"></canvas></div>
+    <p>Total Records: <span id="totalRecords">0</span></p>
+</section>
+
+<!-- MAP -->
+<section id="map">
+    <h2>Farm Location</h2>
+    <div id="map"></div>
+</section>
+
+<!-- WEATHER -->
+<section id="weather">
+    <h2>Weather Update</h2>
+    <div style="text-align:center; margin-bottom:10px;">
+        <input id="city" placeholder="Enter city">
+        <button onclick="getWeather()">Get Weather</button>
+    </div>
+    <div id="forecast" style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;"></div>
+    <!-- Weather Search History -->
+    <div id="history" style="text-align:center; margin-top:10px;">
+        <strong>Recent Searches:</strong>
+        <div id="historyList" style="display:flex; gap:5px; justify-content:center; flex-wrap:wrap;"></div>
+    </div>
+</section>
+
+<!-- RECORDS -->
+<section id="records">
+    <h2>Crop Records</h2>
+    <div style="text-align:center;">
+        <input id="crop" placeholder="Crop Name">
+        <input id="qty" type="number" placeholder="Quantity">
+        <button onclick="addRecord()">Add</button>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Crop Name</th>
+                <th>Quantity</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="list"></tbody>
+    </table>
+</section>
+
+<script>
+const API_KEY="YOUR_WEATHER_API_KEY"; // Replace with your key
+
+/********** Session & Navigation **********/
+let records = JSON.parse(localStorage.getItem("records")||"[]");
+
+function login(){
+    let u=document.getElementById("user").value;
+    let p=document.getElementById("pass").value;
+    if(u && p){
+        localStorage.setItem("session","active");
+        initSite();
+    } else { document.getElementById("err").innerText="Invalid login!"; }
+}
+function logout(){ localStorage.removeItem("session"); location.reload(); }
+function showSection(id){
+    document.querySelectorAll('section').forEach(s=>s.style.display='none');
+    document.getElementById(id).style.display='block';
+}
+function initSite(){
+    if(!localStorage.getItem("session")){
+        showSection('login'); document.getElementById('nav').style.display='none';
+    } else {
+        document.getElementById('nav').style.display='flex';
+        showSection('home');
+        renderChart(); initMap(); getWeather(); showList(); renderHistory();
+    }
+}
+
+/********** Crop Records CRUD + Edit **********/
+class CropRecord { constructor(id,cropName,quantity,date){this.id=id; this.cropName=cropName; this.quantity=quantity; this.date=date;} }
+
+function showList(){
+    const tbody=document.getElementById('list'); tbody.innerHTML='';
+    records.forEach(r=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td><span id="name-${r.id}">${r.cropName}</span></td>
+                      <td><span id="qty-${r.id}">${r.quantity}</span></td>
+                      <td>
+                        <button onclick="editRecord(${r.id})">Edit</button>
+                        <button onclick="delRecord(${r.id})">Delete</button>
+                      </td>`;
+        tbody.appendChild(tr);
+    });
+    document.getElementById('totalRecords').innerText=records.length;
+}
+
+function addRecord(){
+    let crop=document.getElementById("crop").value;
+    let qty=parseInt(document.getElementById("qty").value);
+    if(!crop || !qty) return;
+    let rec=new CropRecord(Date.now(),crop,qty,new Date().toLocaleDateString());
+    records.push(rec); localStorage.setItem("records",JSON.stringify(records));
+    showList(); renderChart();
+    document.getElementById("crop").value=''; document.getElementById("qty").value='';
+}
+
+function delRecord(id){
+    records=records.filter(r=>r.id!==id); localStorage.setItem("records",JSON.stringify(records));
+    showList(); renderChart();
+}
+
+function editRecord(id){
+    const cropName=prompt("Enter new crop name:",document.getElementById(`name-${id}`).innerText);
+    if(!cropName) return;
+    const qtyStr=prompt("Enter new quantity:",document.getElementById(`qty-${id}`).innerText);
+    const qty=parseInt(qtyStr);
+    if(!qty) return;
+    const rec=records.find(r=>r.id===id);
+    rec.cropName=cropName; rec.quantity=qty;
+    localStorage.setItem('records',JSON.stringify(records));
+    showList(); renderChart();
+}
+
+/********** Chart **********/
+function renderChart(){
+    const ctx=document.getElementById('myChart').getContext('2d');
+    if(window.barChart) window.barChart.destroy();
+    window.barChart=new Chart(ctx,{
+        type:'bar',
+        data:{ labels:records.map(r=>r.cropName), datasets:[{label:'Harvest Quantity',data:records.map(r=>r.quantity),backgroundColor:'rgba(46,125,50,0.8)'}]},
+        options:{responsive:true, maintainAspectRatio:false}
+    });
+}
+
+/********** Map **********/
+function initMap(){
+    if(window.map) return;
+    window.map=L.map('map').setView([8.3697,124.8644],12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.map);
+    L.marker([8.3697,124.8644]).addTo(window.map).bindPopup("Farm Location");
+}
+
+/********** Weather + History **********/
+let weatherHistory=JSON.parse(localStorage.getItem('weatherHistory')||'[]');
+
+function updateHistory(city){
+    if(weatherHistory.includes(city)) weatherHistory=weatherHistory.filter(c=>c!==city);
+    weatherHistory.unshift(city);
+    if(weatherHistory.length>5) weatherHistory.pop();
+    localStorage.setItem('weatherHistory',JSON.stringify(weatherHistory));
+    renderHistory();
+}
+
+function renderHistory(){
+    const div=document.getElementById('historyList'); div.innerHTML='';
+    weatherHistory.forEach(city=>{
+        const btn=document.createElement('button');
+        btn.innerText=city; btn.className='main-btn'; btn.style.padding='5px 10px'; btn.onclick=()=>{document.getElementById('city').value=city; getWeather();}
+        div.appendChild(btn);
+    });
+}
+
+function getWeather(){
+    const city=document.getElementById('city').value.trim()||'Cagayan de Oro';
+    fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`)
+    .then(r=>r.json()).then(data=>{
+        const div=document.getElementById('forecast'); div.innerHTML='';
+        if(!data.list){ alert("City not found"); return; }
+        updateHistory(city);
+        const seen=new Set();
+        for(const item of data.list){
+            const date=new Date(item.dt*1000); const key=date.toDateString();
+            if(seen.has(key)) continue; seen.add(key);
+            const icon=item.weather[0].icon, temp=Math.round(item.main.temp), desc=item.weather[0].main;
+            const card=document.createElement('div'); card.style.background='rgba(255,255,255,0.3)'; card.style.borderRadius='10px'; card.style.padding='10px'; card.style.textAlign='center'; card.style.minWidth='100px';
+            card.innerHTML=`<strong>${date.toLocaleDateString(undefined,{weekday:'short'})}</strong><br>
+                            <img src="https://openweathermap.org/img/wn/${icon}@2x.png"><div>${temp}°C</div><div>${desc}</div>`;
+            div.appendChild(card); if(div.childElementCount>=3) break;
+        }
+    }).catch(err=>console.log(err));
+}
+
+/********** Boot **********/
+initSite();
+</script>
+
+</body>
+</html>

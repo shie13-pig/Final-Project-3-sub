@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Farm System — Full Features</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+:root{
+  --green:#293b2a;
+  --panel: rgba(255,255,255,0.85);
+  --panel-strong: rgba(255,255,255,0.95);
+  --glass-border: rgba(0,0,0,0.1);
+  --text:#000;
+}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;color:var(--text); font-size:18px;}
+body{position:relative;min-height:100vh;overflow-x:hidden;background:#fff;}
+body::before{
+  content:"";position:fixed; inset:0;background:url('Sunny cornfield.png') no-repeat center center; background-size:cover; filter: brightness(0.85) blur(1px); z-index:-2;
+}
+body::after{
+  content:"";position:fixed; inset:0;background: linear-gradient(180deg, rgba(255,255,255,0.3), rgba(255,255,255,0.3)); z-index:-1;
+}
+.app { max-width:1200px; margin:18px auto; padding:18px; box-sizing:border-box; }
+header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+.brand { font-weight:700; color:var(--green); font-size:18px; }
+nav { display:flex; gap:8px; flex-wrap:wrap; }
+nav button { background: transparent; color:var(--text); border:1px solid rgba(0,0,0,0.2); padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; font-size:18px; }
+nav button.active { background: rgba(46,125,50,0.2); color:var(--green); border-color: rgba(46,125,50,0.3); }
+
+.panel { background: var(--panel); border-radius:12px; padding:16px; border:1px solid var(--glass-border); margin-bottom:14px; font-size:18px; }
+#loginWrap { min-height: calc(100vh - 36px); display:flex; align-items:center; justify-content:center; }
+.login-card { width:100%; max-width:400px; padding:26px; border-radius:12px; background:var(--panel-strong); border:1px solid var(--glass-border); text-align:center; font-size:18px; }
+.login-card h2{ margin:6px 0 14px 0; color:var(--green); }
+.login-card input { width:100%; padding:10px; margin:8px 0; border-radius:8px; border:1px solid rgba(0,0,0,0.2); background: #fff; color:var(--text); box-sizing:border-box; font-size:18px; }
+
+.btn { background:var(--green); color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; font-size:18px; }
+.btn.ghost { background:transparent; border:1px solid rgba(0,0,0,0.2); color:var(--text); font-size:18px; }
+.small { font-size:16px; color:rgba(0,0,0,0.6); }
+
+.grid { display:grid; grid-template-columns: 1fr 360px; gap:14px; align-items:start; }
+@media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
+
+#chart-container{ width:100%; height:320px; }
+#chart-container canvas{ width:100% !important; height:100% !important; }
+
+#map { width:100%; height:380px; border-radius:10px; margin-top:12px; }
+#coords { margin-top:6px; font-size:18px; color: rgba(0,0,0,0.6); }
+
+#weather-input { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+#weather-input input { padding:8px; border-radius:6px; border:1px solid rgba(0,0,0,0.2); background:#fff; color:var(--text); min-width:180px; font-size:18px; }
+#forecast { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+.forecast-day { background: #fff; padding:10px; border-radius:10px; min-width:110px; text-align:center; font-size:18px; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+.forecast-day img{ width:50px; height:50px; display:block; margin:4px auto; }
+
+.table-responsive { width: 100%; overflow-x: auto; margin-top:10px; }
+table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); min-width: 400px; font-size:18px; }
+th, td { padding: 8px; text-align: center; border-bottom: 1px dashed rgba(0,0,0,0.2); color: #000; background: #fff; font-size:18px; }
+th { background: #f0f0f0; font-weight:600; }
+#records select, #records input { padding:6px 8px; font-size:18px; border-radius:6px; border:1px solid rgba(0,0,0,0.2); background:#fff; color:var(--text); }
+#records button#addRec { font-size:18px; padding:6px 10px; }
+
+@media(max-width:600px){
+  #chart-container { height:260px; }
+  #map { height:220px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Login / Signup -->
+  <div id="loginWrap">
+    <div class="login-card panel" id="loginCard">
+      <h2>Farm System</h2>
+      <p class="small" id="loginModeText">Please sign in to access the app</p>
+
+      <input id="user" autocomplete="username" placeholder="Username" />
+      <input id="pass" type="password" autocomplete="current-password" placeholder="Password" />
+      <input id="email" type="email" placeholder="Email (for Sign Up)" style="display:none;" />
+      <input id="phone" placeholder="Phone (for Sign Up)" style="display:none;" />
+
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button class="btn" id="loginBtn">Login</button>
+        <button class="btn ghost" id="signupToggleBtn">Sign Up</button>
+      </div>
+      <p id="loginErr" style="color:#fcc; margin-top:10px; display:none;"></p>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="appUI" style="display:none;">
+    <header>
+      <div class="brand">Agroguide: Farmer's Guideline</div>
+      <nav id="mainNav">
+        <button data-target="home" class="active">Home</button>
+        <button data-target="dashboard">Dashboard</button>
+        <button data-target="map">Map</button>
+        <button data-target="weather">Weather</button>
+        <button data-target="records">Records</button>
+        <button data-target="guidelines">Farmer Guidelines</button>
+        <button data-target="profile">Profile</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- Home -->
+      <section id="home" class="panel" style="display:block;">
+        <h2>Welcome Farmers!</h2>
+        <p class="small">Manage crops, Farming Guidelines, view map & weather, and track harvest records.</p>
+      </section>
+
+      <!-- Dashboard -->
+      <section id="dashboard" class="panel" style="display:none;">
+        <div class="grid" style="margin-top:12px;">
+          <div id="chart-container" class="panel">
+            <canvas id="myChart"></canvas>
+          </div>
+          <div class="panel" style="min-height:320px;">
+            <h3 style="margin:0 0 8px 0;">Quick Info</h3>
+            <p class="small">Records stored locally. Chart auto-updates.</p>
+            <div style="margin-top:12px;">
+              <strong>Total Records:</strong> <span id="totalRecords">0</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Map -->
+      <section id="map" class="panel" style="display:none;">
+        <h2>Farm Location</h2>
+        <div id="map"></div>
+        <div id="coords"></div>
+      </section>
+
+      <!-- Weather -->
+      <section id="weather" class="panel" style="display:none;">
+        <h2>Weather Forecast</h2>
+        <div id="weather-input">
+          <input id="city" placeholder="Enter city or country">
+          <button class="btn" id="getWeatherBtn">Get Forecast</button>
+        </div>
+        <div id="forecast"></div>
+      </section>
+
+      <!-- Records -->
+      <section id="records" class="panel" style="display:none;">
+        <h2>Crop Records (CRUD)</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:8px; align-items:center;">
+          <select id="crop" style="max-width:140px;">
+            <option value="">Select Crop</option>
+            <option>Corn</option>
+            <option>Tomato</option>
+            <option>Lettuce</option>
+            <option>Carrot</option>
+            <option>Pumpkin</option>
+            <option>Beans</option>
+            <option>Spinach</option>
+            <option>Chili</option>
+            <option>Eggplant</option>
+            <option>Okra</option>
+            <option>Cabbage</option>
+          </select>
+          <input id="qty" type="number" placeholder="Qty" style="max-width:100px; padding:6px;">
+          <select id="unit" style="max-width:100px;">
+            <option value="kg">kg</option>
+            <option value="plants">plants</option>
+            <option value="cobs">cobs</option>
+            <option value="bags">bags</option>
+          </select>
+          <button class="btn" id="addRec" style="padding:6px 10px;">Add</button>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead><tr><th>Crop</th><th>Quantity</th><th>Unit</th><th>Action</th></tr></thead>
+            <tbody id="list"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Guidelines -->
+      <section id="guidelines" class="panel" style="display:none;">
+        <h2>Farming Guidelines</h2>
+        <p class="small">Tips for best crops, soil health, and pest management by month.</p>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Best Crops</th>
+                <th>Soil Tips</th>
+                <th>Pesticides / Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Jan</td><td>Corn, Lettuce, Carrot</td><td>Well-drained, compost-rich soil</td><td>Neem oil</td></tr>
+              <tr><td>Feb</td><td>Tomato, Cucumber, Spinach</td><td>Neutral pH, avoid waterlogging</td><td>Organic insecticides</td></tr>
+              <tr><td>Mar</td><td>Pumpkin, Beans, Radish</td><td>Fertile, loose soil</td><td>Check aphids</td></tr>
+              <tr><td>Apr</td><td>Chili, Eggplant, Lettuce</td><td>Mix compost & mulch</td><td>Natural fungicides</td></tr>
+              <tr><td>May</td><td>Okra, Corn, Cucumber</td><td>Maintain moisture</td><td>Rotate crops</td></tr>
+              <tr><td>Jun</td><td>Rice, Tomato, Beans</td><td>Rich nitrogen, good drainage</td><td>Organic fertilizers</td></tr>
+              <tr><td>Jul</td><td>Cabbage, Lettuce, Carrot</td><td>pH 6-7, aerated soil</td><td>Monitor pests</td></tr>
+              <tr><td>Aug</td><td>Pumpkin, Chili, Eggplant</td><td>Fertile, well-drained</td><td>Neem or garlic spray</td></tr>
+              <tr><td>Sep</td><td>Spinach, Beans, Radish</td><td>Add compost, keep moist</td><td>Watch fungus</td></tr>
+              <tr><td>Oct</td><td>Corn, Cucumber, Tomato</td><td>Loamy soil, rotate crops</td><td>Organic insecticides</td></tr>
+              <tr><td>Nov</td><td>Carrot, Lettuce, Pumpkin</td><td>Rich, loose soil</td><td>Natural pest deterrents</td></tr>
+              <tr><td>Dec</td><td>Beans, Spinach, Cabbage</td><td>Mix compost, avoid clay</td><td>Rotate crops, monitor pests</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Profile -->
+      <section id="profile" class="panel" style="display:none;">
+        <h2>User Profile</h2>
+        <div style="display:flex; flex-wrap:wrap; gap:20px;">
+          <div style="flex:1; min-width:200px; text-align:center;">
+            <img id="profilePic" src="Sunny cornfield.png" alt="Profile Picture" style="border-radius:50%; width:150px; height:150px; object-fit:cover; border:2px solid var(--green);">
+          </div>
+          <div style="flex:2; min-width:250px;">
+            <h3>Personal Information</h3>
+            <div style="margin-bottom:12px;">
+              <label>Username:</label><br>
+              <input type="text" id="profileUsername" value="" style="width:100%; padding:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.2);">
+            </div>
+            <div style="margin-bottom:12px;">
+              <label>Email:</label><br>
+              <input type="email" id="profileEmail" value="" style="width:100%; padding:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.2);">
+            </div>
+            <div style="margin-bottom:12px;">
+              <label>Phone:</label><br>
+              <input type="text" id="profilePhone" value="" style="width:100%; padding:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.2);">
+            </div>
+            <div style="margin-top:20px;">
+              <button class="btn" onclick="doLogout()">Logout</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <h3>Account Summary</h3>
+          <p>Total Crop Records: <span id="profileTotalRecords">0</span></p>
+          <p id="profileFavoriteCrop">Most Sale Crop: None</p>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+const API_KEY="5071a911a3c45022cb808bac524236b1";
+function $(id){return document.getElementById(id);}
+let records=JSON.parse(localStorage.getItem('farm_records')||'[]');
+let users=JSON.parse(localStorage.getItem('farm_users')||'[]');
+let loginAttempts=0;
+let signupMode=false;
+let map, marker, chart;
+
+// LOGIN / SIGNUP
+function showError(msg){ const el=$('loginErr'); el.style.display='block'; el.textContent=msg; }
+
+$('signupToggleBtn').addEventListener('click', ()=>{
+  signupMode=!signupMode;
+  if(signupMode){
+    $('loginModeText').textContent='Create a new account';
+    $('loginBtn').textContent='Sign Up';
+    $('email').style.display='block';
+    $('phone').style.display='block';
+    $('signupToggleBtn').textContent='Back to Login';
+    $('loginErr').style.display='none';
+  }else{
+    $('loginModeText').textContent='Please sign in to access the app';
+    $('loginBtn').textContent='Login';
+    $('email').style.display='none';
+    $('phone').style.display='none';
+    $('signupToggleBtn').textContent='Sign Up';
+    $('loginErr').style.display='none';
+  }
+});
+
+$('loginBtn').addEventListener('click', ()=>{
+  const u=$('user').value.trim();
+  const p=$('pass').value;
+  const e=$('email').value.trim();
+  const ph=$('phone').value.trim();
+  if(!u||!p){ showError('Fill username and password'); return;}
+  if(signupMode){
+    if(!e||!ph){ showError('Fill email & phone'); return;}
+    if(users.find(x=>x.username===u)){ showError('Username exists'); return;}
+    users.push({username:u,password:p,email:e,phone:ph});
+    localStorage.setItem('farm_users',JSON.stringify(users));
+    alert('Account created! Login now.'); signupMode=false; $('signupToggleBtn').click();
+  }else{
+    const usr=users.find(x=>x.username===u && x.password===p);
+    if(!usr){ loginAttempts++; showError('Invalid credentials'); return;}
+    $('loginWrap').style.display='none'; $('appUI').style.display='block';
+    initApp(usr);
+  }
+});
+
+// NAVIGATION
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click', e=>{
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('main section').forEach(sec=>sec.style.display='none');
+    $(btn.dataset.target).style.display='block';
+    if(btn.dataset.target==='map'){ setTimeout(initMap,300); }
+    if(btn.dataset.target==='dashboard'){ updateChart(); }
+    if(btn.dataset.target==='profile'){ updateProfile(); }
+  });
+});
+
+// LOGOUT
+function doLogout(){ $('appUI').style.display='none'; $('loginWrap').style.display='flex'; }
+
+// RECORDS CRUD
+function saveRecords(){ localStorage.setItem('farm_records',JSON.stringify(records)); }
+function renderRecords(){
+  const list=$('list'); list.innerHTML='';
+  records.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${r.crop}</td><td>${r.qty}</td><td>${r.unit}</td>
+      <td><button onclick="deleteRecord(${i})" style="padding:4px 6px;">Delete</button></td>`;
+    list.appendChild(tr);
+  });
+  $('totalRecords').textContent=records.length;
+}
+function deleteRecord(idx){ records.splice(idx,1); saveRecords(); renderRecords(); updateChart(); }
+
+$('addRec').addEventListener('click', ()=>{
+  const c=$('crop').value; const q=parseFloat($('qty').value); const u=$('unit').value;
+  if(!c||!q||!u){ alert('Fill all fields'); return;}
+  records.push({crop:c,qty:q,unit:u});
+  saveRecords(); renderRecords(); updateChart(); $('qty').value=''; $('crop').value='';
+});
+
+renderRecords();
+
+// CHART
+function updateChart(){
+  const ctx=$('myChart').getContext('2d');
+  const data={};
+  records.forEach(r=>{ data[r.crop]=(data[r.crop]||0)+r.qty; });
+  const labels=Object.keys(data);
+  const values=Object.values(data);
+  if(chart){ chart.destroy(); }
+  chart=new Chart(ctx,{
+    type:'bar',
+    data:{labels:labels,datasets:[{label:'Quantity',data:values,backgroundColor:'#2e7d32'}]},
+    options:{responsive:true,plugins:{legend:{display:false}}}
+  });
+}
+
+// MAP
+function initMap(){
+  if(map) return;
+  map=L.map('map').setView([8.3540066, 124.8502529],19);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  marker=L.marker([ 8.3540066, 124.8502529],{draggable:true}).addTo(map);
+  marker.on('dragend',e=>{$('coords').textContent=`Lat: ${marker.getLatLng().lat.toFixed(4)}, Lng: ${marker.getLatLng().lng.toFixed(4)}`;});
+  $('coords').textContent=`Lat: ${marker.getLatLng().lat.toFixed(4)}, Lng: ${marker.getLatLng().lng.toFixed(4)}`;
+}
+
+// WEATHER
+$('getWeatherBtn').addEventListener('click', ()=>{
+  const city=$('city').value.trim(); if(!city){ alert('Enter city'); return;}
+  fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${API_KEY}&units=metric`)
+    .then(res=>res.json()).then(data=>{
+      if(data.cod!='200'){ alert('City not found'); return;}
+      const list=data.list.filter((_,i)=>i%8===0);
+      const container=$('forecast'); container.innerHTML='';
+      list.forEach(d=>{
+        const div=document.createElement('div'); div.className='forecast-day';
+        div.innerHTML=`<strong>${new Date(d.dt*1000).toLocaleDateString('en-us',{weekday:'short'})}</strong>
+          <img src="https://openweathermap.org/img/wn/${d.weather[0].icon}.png">
+          <div>${d.main.temp.toFixed(1)}°C</div>
+          <div class="small">${d.weather[0].main}</div>`;
+        container.appendChild(div);
+      });
+    });
+});
+
+// PROFILE
+function updateProfile(){
+  const username=$('user').value;
+  const usr=users.find(x=>x.username===username);
+  if(!usr) return;
+  $('profileUsername').value=usr.username;
+  $('profileEmail').value=usr.email;
+  $('profilePhone').value=usr.phone;
+  $('profileTotalRecords').textContent=records.length;
+  if(records.length>0){
+    const cropCount={};
+    records.forEach(r=>{ cropCount[r.crop]=(cropCount[r.crop]||0)+r.qty; });
+    const maxCrop=Object.entries(cropCount).sort((a,b)=>b[1]-a[1])[0][0];
+    $('profileFavoriteCrop').textContent=`Most Sale Crop: ${maxCrop}`;
+  }else{$('profileFavoriteCrop').textContent='Most Sale Crop: None';}
+}
+</script>
+</body>
+</html>
