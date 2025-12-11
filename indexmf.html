@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Farm System — Full Features (Map + Popups + Slideshow)</title>
+
+<!-- Chart.js + Leaflet -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+/* ---------- SLIDESHOW BACKGROUND (covers whole site) ---------- */
+#bg-slideshow {
+  position: fixed;
+  inset: 0;
+  z-index: -3; /* behind everything */
+  overflow: hidden;
+}
+.bg-slide {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1200ms ease;
+  filter: brightness(0.85) blur(0.8px);
+}
+.bg-slide.show { opacity: 1; }
+
+/* a subtle overlay to calm down contrast */
+#bg-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.22));
+  z-index: -2;
+  pointer-events: none;
+}
+
+/* ---------- App styles (unchanged structure but tuned) ---------- */
+:root{
+  --green:#293b2a;
+  --panel: rgba(255,255,255,0.88);
+  --panel-strong: rgba(255,255,255,0.96);
+  --glass-border: rgba(0,0,0,0.08);
+  --text:#0b1b10;
+}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);font: size 40px;}
+body{position:relative;min-height:100vh;overflow-x:hidden;background:#fff;}
+.app { max-width:1200px; margin:18px auto; padding:18px; box-sizing:border-box; }
+
+/* header */
+header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+  flex-wrap:nowrap;
+  width:100%;
+}
+.brand {
+  font-weight:700;
+  color:var(--green);
+  font-size:20px;
+  white-space:nowrap;
+}
+nav {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:nowrap;
+  white-space:nowrap;
+}
+nav button {
+  background: transparent;
+  color:var(--text);
+  border:1px solid rgba(0,0,0,0.12);
+  padding:6px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  font-weight:500;
+  font-size:15px;
+}
+nav button.active { background: rgba(46,125,50,0.16); color:var(--green); border-color: rgba(46,125,50,0.22); }
+
+/* panels and layout */
+.panel { background: var(--panel); border-radius:12px; padding:16px; border:1px solid var(--glass-border); margin-bottom:14px; font-size:18px; box-sizing:border-box; }
+#loginWrap { min-height: calc(100vh - 36px); display:flex; align-items:center; justify-content:center; }
+.login-card { width:100%; max-width:420px; padding:28px; border-radius:12px; background:var(--panel-strong); border:1px solid var(--glass-border); text-align:center; font-size:18px; box-sizing:border-box; }
+.login-card h2{ margin:6px 0 14px 0; color:var(--green); font-size:24px; }
+.login-card input { width:100%; padding:10px; margin:8px 0; border-radius:8px; border:1px solid rgba(0,0,0,0.12); background: #fff; color:var(--text); box-sizing:border-box; font-size:16px; }
+
+.btn { background:var(--green); color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; font-size:16px; }
+.btn.ghost { background:transparent; border:1px solid rgba(0,0,0,0.12); color:var(--text); font-size:16px; }
+.small { font-size:14px; color:rgba(0,0,0,0.6); }
+
+.grid { display:grid; grid-template-columns: 1fr 360px; gap:14px; align-items:start; }
+@media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
+
+#chart-container{ width:100%; height:320px; }
+#chart-container canvas{ width:100% !important; height:100% !important; }
+
+/* maps */
+#map { width:100%; height:380px; border-radius:10px; margin-top:12px; }
+#coords { margin-top:6px; font-size:16px; color: rgba(0,0,0,0.6); }
+
+/* small map */
+#smallMap { width:100%; height:280px; border-radius:8px; margin-top:12px; }
+
+/* weather */
+#weather-input { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+#weather-input input { padding:8px; border-radius:6px; border:1px solid rgba(0,0,0,0.12); background:#fff; color:var(--text); min-width:180px; font-size:16px; }
+#forecast { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+.forecast-day { background: #fff; padding:10px; border-radius:10px; min-width:110px; text-align:center; font-size:14px; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+.forecast-day img{ width:50px; height:50px; display:block; margin:4px auto; }
+
+.table-responsive { width: 100%; overflow-x: auto; margin-top:10px; }
+table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); min-width: 400px; font-size:16px; }
+th, td { padding: 8px; text-align: center; border-bottom: 1px dashed rgba(0,0,0,0.08); color: #000; background: #fff; font-size:15px; }
+th { background: #f6f6f6; font-weight:600; }
+#records select, #records input { padding:6px 8px; font-size:15px; border-radius:6px; border:1px solid rgba(0,0,0,0.12); background:#fff; color:var(--text); }
+#records button#addRec { font-size:15px; padding:6px 10px; }
+
+.coords-small { margin-top:8px; font-size:14px; color:rgba(0,0,0,0.7); }
+
+/* responsiveness tweaks */
+@media(max-width:600px){
+  #chart-container { height:260px; }
+  #map { height:220px; }
+  #smallMap { height:200px; }
+}
+
+/* small utility */
+.hidden { display:none !important; }
+
+/* ================================
+   HERO CENTER + FADE + FLOAT UP
+   ================================= */
+
+@keyframes floatUpCenter {
+  0% {
+    opacity: 0;
+    transform: translateY(40px); /* start lower */
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-6px); /* float effect */
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0); /* final center */
+  }
+}
+
+.hero-animate {
+  animation: floatUpCenter 2.2s ease-out forwards;
+}
+
+/* FULL SCREEN CENTERED HOME SECTION */
+#home.fullscreen-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  text-align: center;
+  height: 100vh;
+  background: transparent;
+  padding-top: 120px;
+}
+
+#home.fullscreen-center h1 {
+  font-size: 56px;
+  margin-bottom: 10px;
+  color: var(--green);
+}
+
+#home.fullscreen-center p {
+  font-size: 20px;
+  max-width: 700px;
+}
+
+/* Inserted styles */
+#home.fullscreen-center h1,
+#home.fullscreen-center p {
+  color: #0a2e0a; /* dark green */
+  text-shadow: 0px 2px 4px rgba(0,0,0,0.40);
+}
+
+nav a, 
+header h1 {
+  color: #0a2e0a !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.4);
+}
+
+#home p {
+  color: #2f4f2f; /* medium-dark green */
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  max-width: 600px;
+  margin: 0 auto;
+}
+</style>
+</head>
+<body>
+
+<!-- Slideshow background: two layers crossfade -->
+<div id="bg-slideshow" aria-hidden="true">
+  <div id="bg1" class="bg-slide"></div>
+  <div id="bg2" class="bg-slide"></div>
+</div>
+<div id="bg-overlay" aria-hidden="true"></div>
+
+<div class="app">
+
+  <!-- Login / Signup -->
+  <div id="loginWrap">
+    <div class="login-card panel" id="loginCard">
+      <h2>Agroguide</h2>
+      <p class="small" id="loginModeText">Please sign in to access the app</p>
+
+      <input id="user" autocomplete="username" placeholder="Username" />
+      <input id="pass" type="password" autocomplete="current-password" placeholder="Password" />
+      <input id="email" type="email" placeholder="Email (for Sign Up)" style="display:none;" />
+      <input id="phone" placeholder="Phone (for Sign Up)" style="display:none;" />
+
+      <div style="display:flex; gap:8px; margin-top:10px; justify-content:center;">
+        <button class="btn" id="loginBtn">Login</button>
+        <button class="btn ghost" id="signupToggleBtn">Sign Up</button>
+      </div>
+      <p id="loginErr" style="color:#fcc; margin-top:10px; display:none;"></p>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="appUI" style="display:none;">
+    <header>
+      <div class="brand">Agroguide: Farmer's Guideline</div>
+
+      <!-- NAVIGATION RIGHT SIDE -->
+      <nav id="mainNav">
+        <button data-target="home" class="active">Home</button>
+        <button data-target="dashboard">Dashboard</button>
+        <button data-target="map">Map</button>
+        <button data-target="weather">Weather</button>
+        <button data-target="records">Records</button>
+        <button data-target="guidelines">Farmer Guidelines</button>
+        <button data-target="profile">Profile</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- Home -->
+<section id="home" class="panel fullscreen-center" style="display:block;">
+  <h1 class="hero-animate">Welcome Farmers!</h1>
+  <p class="small hero-animate">
+    Manage crops, view farming guidelines, mark farm locations on the map,
+    check weather, and track harvest records — all in one simple dashboard.
+  </p>
+</section>
+
+      <!-- Dashboard -->
+      <section id="dashboard" class="panel" style="display:none;">
+        <div class="grid" style="margin-top:12px;">
+          <div id="chart-container" class="panel">
+            <canvas id="myChart"></canvas>
+          </div>
+          <div class="panel" style="min-height:320px;">
+            <h3 style="margin:0 0 8px 0;">Quick Info</h3>
+            <p class="small">Records stored locally. Chart auto-updates.</p>
+            <div style="margin-top:12px;">
+              <strong>Total Records:</strong> <span id="totalRecords">0</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Map -->
+      <section id="map" class="panel" style="display:none;">
+        <h2>Farm Location</h2>
+        <div id="map"></div>
+        <div id="coords"></div>
+      </section>
+
+      <!-- Weather -->
+      <section id="weather" class="panel" style="display:none;">
+        <h2>Weather Forecast</h2>
+        <div id="weather-input">
+          <input id="city" placeholder="Enter city or country">
+          <button class="btn" id="getWeatherBtn">Get Forecast</button>
+        </div>
+        <div id="forecast"></div>
+      </section>
+
+      <!-- Records -->
+      <section id="records" class="panel" style="display:none;">
+        <h2>Crop Records (CRUD)</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:8px; align-items:center;">
+          <select id="crop" style="max-width:160px;">
+            <option value="">Select Crop</option>
+            <option>Corn</option>
+            <option>Tomato</option>
+            <option>Lettuce</option>
+            <option>Carrot</option>
+            <option>Pumpkin</option>
+            <option>Beans</option>
+            <option>Spinach</option>
+            <option>Chili</option>
+            <option>Eggplant</option>
+            <option>Okra</option>
+            <option>Cabbage</option>
+          </select>
+          <input id="qty" type="number" placeholder="Qty" style="max-width:100px; padding:6px;">
+          <input id="datePlanted" type="date" style="max-width:170px; padding:6px;" title="Date planted (optional)">
+          <select id="unit" style="max-width:100px;">
+            <option value="plants">plants</option>
+          </select>
+          <!-- Add is disabled until user selects a location on the small map -->
+          <button class="btn" id="addRec" style="padding:6px 10px;" disabled>Add</button>
+        </div>
+
+        <!-- Small map selector -->
+        <div id="smallMap"></div>
+        <div id="smallCoords" class="coords-small">No location selected. Click on the map to choose where to plant.</div>
+
+        <div class="table-responsive">
+          <table>
+            <thead><tr><th>Crop</th><th>Quantity</th><th>Date</th><th>Unit</th><th>Lat</th><th>Lng</th><th>Action</th></tr></thead>
+            <tbody id="list"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Guidelines -->
+      <section id="guidelines" class="panel" style="display:none;">
+        <h2>Farming Guidelines</h2>
+        <p class="small">Tips for best crops, soil health, and pest management by month.</p>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Best Crops</th>
+                <th>Soil Tips</th>
+                <th>Pesticides / Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Jan</td><td>Corn, Lettuce, Carrot</td><td>Well-drained, compost-rich soil</td><td>Neem oil</td></tr>
+              <tr><td>Feb</td><td>Tomato, Cucumber, Spinach</td><td>Neutral pH, avoid waterlogging</td><td>Organic insecticides</td></tr>
+              <tr><td>Mar</td><td>Pumpkin, Beans, Radish</td><td>Fertile, loose soil</td><td>Check aphids</td></tr>
+              <tr><td>Apr</td><td>Chili, Eggplant, Lettuce</td><td>Mix compost & mulch</td><td>Natural fungicides</td></tr>
+              <tr><td>May</td><td>Okra, Corn, Cucumber</td><td>Maintain moisture</td><td>Rotate crops</td></tr>
+              <tr><td>Jun</td><td>Rice, Tomato, Beans</td><td>Rich nitrogen, good drainage</td><td>Organic fertilizers</td></tr>
+              <tr><td>Jul</td><td>Cabbage, Lettuce, Carrot</td><td>pH 6-7, aerated soil</td><td>Monitor pests</td></tr>
+              <tr><td>Aug</td><td>Pumpkin, Chili, Eggplant</td><td>Fertile, well-drained</td><td>Neem or garlic spray</td></tr>
+              <tr><td>Sep</td><td>Spinach, Beans, Radish</td><td>Add compost, keep moist</td><td>Watch fungus</td></tr>
+              <tr><td>Oct</td><td>Corn, Cucumber, Tomato</td><td>Loamy soil, rotate crops</td><td>Organic insecticides</td></tr>
+              <tr><td>Nov</td><td>Carrot, Lettuce, Pumpkin</td><td>Rich, loose soil</td><td>Natural pest deterrents</td></tr>
+              <tr><td>Dec</td><td>Beans, Spinach, Cabbage</td><td>Mix compost, avoid clay</td><td>Rotate crops, monitor pests</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Profile -->
+      <section id="profile" class="panel" style="display:none;">
+        <h2>User Profile</h2>
+        <div style="display:flex; flex-wrap:wrap; gap:20px;">
+          <div style="flex:1; min-width:200px; text-align:center;">
+            <img id="profilePic" src="Sunny cornfield.png" alt="Profile Picture" style="border-radius:50%; width:150px; height:150px; object-fit:cover; border:2px solid var(--green);">
+          </div>
+          <div style="flex:2; min-width:250px;">
+            <h3>Personal Information</h3>
+            <div style="margin-bottom:12px;">
+              <label>Username:</label><br>
+              <input type="text" id="profileUsername" value="" style="width:100%; padding:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.12);">
+            </div>
+            <div style="margin-bottom:12px;">
+              <label>Email:</label><br>
+              <input type="email" id="profileEmail" value="" style="width:100%; padding:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.12);">
+            </div>
+            <div style="margin-bottom:12px;">
+              <label>Phone:</label><br>
+              <input type="text" id="profilePhone" value="" style="width:100%; padding:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.12);">
+            </div>
+            <div style="margin-top:20px;">
+              <button class="btn" onclick="doLogout()">Logout</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <h3>Account Summary</h3>
+          <p>Total Crop Records: <span id="profileTotalRecords">0</span></p>
+          <p id="profileFavoriteCrop">Most Sale Crop: None</p>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+/* ===========================
+   Slideshow configuration
+   ===========================
+*/
+const slideshowImages = [
+  'Sunny cornfield.png',
+  'image1.jpg',
+  'image2.jpg',
+  'image3.jpg',
+  'image4.jpg'
+];
+const SLIDE_INTERVAL_MS = 5000; // change every 5 seconds
+
+(function setupSlideshow(){
+  const bg1 = document.getElementById('bg1');
+  const bg2 = document.getElementById('bg2');
+  let idx = 0;
+  let showingFirst = true;
+
+  function setBg(el, url){
+    el.style.backgroundImage = `url("${url}")`;
+  }
+
+  if(!bg1 || !bg2) return;
+
+  if(slideshowImages.length === 0){
+    setBg(bg1, 'Sunny cornfield.png');
+    bg1.classList.add('show');
+    return;
+  }
+
+  setBg(bg1, slideshowImages[0]);
+  bg1.classList.add('show');
+  setBg(bg2, slideshowImages.length > 1 ? slideshowImages[1] : slideshowImages[0]);
+  idx = 1;
+
+  setInterval(()=>{
+    const nextIndex = (idx + 1) % slideshowImages.length;
+    if(showingFirst){
+      setBg(bg2, slideshowImages[idx]);
+      bg2.classList.add('show');
+      bg1.classList.remove('show');
+    } else {
+      setBg(bg1, slideshowImages[idx]);
+      bg1.classList.add('show');
+      bg2.classList.remove('show');
+    }
+    showingFirst = !showingFirst;
+    idx = nextIndex;
+  }, SLIDE_INTERVAL_MS);
+})();
+
+/* ===========================
+   OOP Classes & Storage
+   ===========================
+*/
+
+// StorageManager: abstraction for localStorage
+class StorageManager {
+  static save(key, value){
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+  static load(key){
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  }
+  static delete(key){
+    localStorage.removeItem(key);
+  }
+}
+
+// User class (encapsulation)
+class User {
+  #username;
+  #email;
+  #phone;
+  #password;
+  constructor(username, email, phone, password){
+    this.#username = username;
+    this.#email = email;
+    this.#phone = phone;
+    this.#password = password;
+  }
+  get username(){ return this.#username; }
+  get email(){ return this.#email; }
+  get phone(){ return this.#phone; }
+  validatePassword(pw){ return this.#password === pw; }
+  toJSON(){ return { username: this.#username, email: this.#email, phone: this.#phone, password: this.#password }; }
+  static fromJSON(obj){ return new User(obj.username, obj.email, obj.phone, obj.password); }
+}
+
+// Base Record class (encapsulation)
+class Record {
+  #crop;
+  #qty;
+  #date;
+  #lat;
+  #lng;
+  constructor(crop, qty, date, lat, lng){
+    this.#crop = crop;
+    this.#qty = qty;
+    this.#date = date;
+    this.#lat = lat;
+    this.#lng = lng;
+  }
+  get crop(){ return this.#crop; }
+  get qty(){ return this.#qty; }
+  get date(){ return this.#date; }
+  get lat(){ return this.#lat; }
+  get lng(){ return this.#lng; }
+  toJSON(){ return { crop: this.#crop, qty: this.#qty, date: this.#date, lat: this.#lat, lng: this.#lng }; }
+  static fromJSON(obj){ return new Record(obj.crop, obj.qty, obj.date, obj.lat, obj.lng); }
+}
+
+// MapRecordMarker extends Record (inheritance) and adds map marker behavior
+class MapRecordMarker extends Record {
+  constructor(crop, qty, date, lat, lng){
+    super(crop, qty, date, lat, lng);
+    this.marker = null;
+  }
+
+  // create popup HTML (polymorphism allowed if we override in subclasses)
+  popupHtml(){
+    const dateText = this.date ? (new Date(this.date)).toLocaleDateString() : 'N/A';
+    return `<div style="min-width:200px;font-size:14px">
+      <strong>${escapeHtml(this.crop)}</strong> &nbsp; (<em>${escapeHtml(String(this.qty))}</em>)<br/>
+      <small>Planted: ${escapeHtml(dateText)}</small><br/>
+      <small>Location: ${escapeHtml(String(this.lat))}, ${escapeHtml(String(this.lng))}</small>
+    </div>`;
+  }
+
+  addToMap(map){
+    if(!map) return;
+    const marker = L.marker([this.lat, this.lng]).addTo(map).bindPopup(this.popupHtml());
+    this.marker = marker;
+    return marker;
+  }
+
+  removeFromMap(map){
+    if(this.marker && map){
+      try{ map.removeLayer(this.marker); } catch(e){}
+      this.marker = null;
+    }
+  }
+
+  toJSON(){
+    // keep same shape as base but allow easy reconstruction
+    return { crop: this.crop, qty: this.qty, date: this.date, lat: this.lat, lng: this.lng };
+  }
+
+  static fromJSON(obj){
+    return new MapRecordMarker(obj.crop, obj.qty, obj.date, obj.lat, obj.lng);
+  }
+}
+
+/* ===========================
+   App state + helpers
+   =========================== */
+const API_KEY="5071a911a3c45022cb808bac524236b1";
+function $(id){ return document.getElementById(id); }
+
+let records = []; // will hold MapRecordMarker instances
+let users = [];   // will hold User instances
+let signupMode = false;
+let map = null, mainMarker = null, chart = null;
+let smallMap = null, smallTempMarker = null;
+let selectedLocation = null; // {lat,lng}
+let mainMapMarkers = [];
+
+/* Load stored users & records on start (convert to class instances) */
+(function bootstrapData(){
+  const rawUsers = StorageManager.load('farm_users') || [];
+  users = rawUsers.map(u => User.fromJSON(u));
+
+  const rawRecords = StorageManager.load('farm_records') || [];
+  records = rawRecords.map(r => MapRecordMarker.fromJSON(r));
+})();
+
+/* ===========================
+   Auth (uses User class + StorageManager)
+   =========================== */
+function showError(msg){ const el=$('loginErr'); el.style.display='block'; el.textContent=msg; }
+
+$('signupToggleBtn').addEventListener('click', ()=>{
+  signupMode = !signupMode;
+  if(signupMode){
+    $('loginModeText').textContent='Create a new account';
+    $('loginBtn').textContent='Sign Up';
+    $('email').style.display='block';
+    $('phone').style.display='block';
+    $('signupToggleBtn').textContent='Back to Login';
+    $('loginErr').style.display='none';
+  } else {
+    $('loginModeText').textContent='Please sign in to access the app';
+    $('loginBtn').textContent='Login';
+    $('email').style.display='none';
+    $('phone').style.display='none';
+    $('signupToggleBtn').textContent='Sign Up';
+    $('loginErr').style.display='none';
+  }
+});
+
+$('loginBtn').addEventListener('click', ()=>{
+  const u = $('user').value.trim();
+  const p = $('pass').value;
+  const e = $('email').value.trim();
+  const ph = $('phone').value.trim();
+  if(!u || !p){ showError('Fill username and password'); return; }
+  if(signupMode){
+    if(!e || !ph){ showError('Fill email & phone'); return; }
+    if(users.find(x => x.username === u)){ showError('Username exists'); return; }
+    const newUser = new User(u, e, ph, p);
+    users.push(newUser);
+    StorageManager.save('farm_users', users.map(x => x.toJSON()));
+    alert('Account created! Login now.');
+    signupMode = false;
+    $('signupToggleBtn').click();
+  } else {
+    const usr = users.find(x => x.username === u && x.validatePassword(p));
+    if(!usr){ showError('Invalid credentials'); return; }
+    // set session
+    StorageManager.save('sessionUser', usr.toJSON());
+    $('loginWrap').style.display='none';
+    $('appUI').style.display='block';
+    initApp(usr);
+  }
+});
+
+/* NAVIGATION */
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('main section').forEach(sec=>sec.style.display='none');
+    $(btn.dataset.target).style.display='block';
+
+    if(btn.dataset.target==='map'){
+      initMap();
+      setTimeout(()=>{ if(map) map.invalidateSize(); }, 260);
+    }
+    if(btn.dataset.target==='records'){
+      initSmallMap();
+      setTimeout(()=>{ if(smallMap) smallMap.invalidateSize(); }, 260);
+    }
+    if(btn.dataset.target==='dashboard'){ updateChart(); }
+    if(btn.dataset.target==='profile'){ updateProfile(); }
+  });
+});
+
+/* LOGOUT */
+function doLogout(){
+  StorageManager.delete('sessionUser');
+  $('appUI').style.display='none'; $('loginWrap').style.display='flex';
+}
+
+/* ===========================
+   Records rendering / CRUD
+   =========================== */
+
+function saveRecords(){
+  StorageManager.save('farm_records', records.map(r => r.toJSON()));
+}
+
+function renderRecords(){
+  const list = $('list'); list.innerHTML = '';
+  records.forEach((r, i) => {
+    const dateText = r.date ? (new Date(r.date)).toLocaleDateString() : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(r.crop)}</td>
+      <td>${escapeHtml(String(r.qty))}</td>
+      <td>${escapeHtml(dateText)}</td>
+      <td>${escapeHtml('plants')}</td>
+      <td>${escapeHtml(String(r.lat || ''))}</td>
+      <td>${escapeHtml(String(r.lng || ''))}</td>
+      <td>
+        <button onclick="deleteRecord(${i})" style="padding:4px 6px; margin-right:6px;">Delete</button>
+        <button onclick="editRecord(${i})" style="padding:4px 6px;">Edit</button>
+      </td>`;
+    list.appendChild(tr);
+  });
+  $('totalRecords').textContent = records.length;
+  if(document.getElementById('profile').style.display !== 'none'){
+    updateProfile();
+  }
+  updateChart();
+}
+
+function deleteRecord(idx){
+  const rec = records[idx];
+  if(!rec) return;
+  // remove marker if exists
+  rec.removeFromMap(map);
+  // remove from array
+  records.splice(idx, 1);
+  saveRecords();
+  renderRecords();
+  // re-init map markers to keep consistent ids
+  if(map) initMap();
+}
+
+// Simple Edit (in-place) - opens fields to edit record
+function editRecord(idx){
+  const rec = records[idx];
+  if(!rec) return;
+  const crop = prompt('Crop', rec.crop) || rec.crop;
+  const qty = parseFloat(prompt('Quantity', String(rec.qty)) || rec.qty);
+  const date = prompt('Date (YYYY-MM-DD)', rec.date || '') || rec.date;
+  // lat/lng not editable here (could allow selecting on smallMap)
+  // update record - because fields are private, recreate new instance
+  const newRec = new MapRecordMarker(crop, qty, date, rec.lat, rec.lng);
+  // replace
+  rec.removeFromMap(map);
+  records[idx] = newRec;
+  saveRecords();
+  renderRecords();
+  if(map) initMap();
+}
+
+/* Add record event */
+$('addRec').addEventListener('click', ()=>{
+  const c = $('crop').value;
+  const q = parseFloat($('qty').value);
+  const u = $('unit').value;
+  const d = $('datePlanted').value;
+  if(!c || !q || !u){ alert('Fill all fields'); return; }
+  if(!selectedLocation){ alert('Please select a location on the small map first'); return; }
+
+  const rec = new MapRecordMarker(c, q, d || null, Number(selectedLocation.lat.toFixed(6)), Number(selectedLocation.lng.toFixed(6)));
+  records.push(rec);
+  saveRecords();
+
+  renderRecords();
+
+  if(map){
+    rec.addToMap(map);
+    try {
+      const latlngs = records.map(r=>[r.lat, r.lng]);
+      if(latlngs.length) { map.fitBounds(latlngs, { padding:[40,40], maxZoom:16 }); }
+    } catch(e){}
+  }
+
+  if(smallTempMarker){ smallMap.removeLayer(smallTempMarker); smallTempMarker = null; }
+  selectedLocation = null;
+  $('smallCoords').textContent = 'No location selected. Click on the map to choose where to plant.';
+  $('qty').value=''; $('crop').value=''; $('datePlanted').value='';
+  $('addRec').disabled = true;
+});
+
+/* ===========================
+   Chart
+   =========================== */
+function updateChart(){
+  const ctx = $('myChart').getContext('2d');
+  const data = {};
+  records.forEach(r => { data[r.crop] = (data[r.crop] || 0) + Number(r.qty); });
+  const labels = Object.keys(data);
+  const values = Object.values(data);
+  if(chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type:'bar',
+    data:{ labels: labels, datasets: [{ label:'Quantity', data: values, backgroundColor:'#2e7d32' }] },
+    options:{ responsive:true, plugins:{ legend:{ display:false } } }
+  });
+}
+
+/* ===========================
+   Map functions
+   =========================== */
+function initMap(){
+  if(map){
+    try{ map.remove(); } catch(e){}
+    map = null; mainMarker = null; mainMapMarkers = [];
+  }
+  map = L.map('map').setView([8.3540066, 124.8502529],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+
+  mainMapMarkers = [];
+  const latlngs = [];
+
+  // add markers from records and set their marker property
+  records.forEach((r, idx) => {
+    if(r.lat != null && r.lng != null){
+      try {
+        const marker = r.addToMap(map);
+        if(marker) mainMapMarkers.push(marker);
+        latlngs.push([r.lat, r.lng]);
+      } catch(e){}
+    }
+  });
+
+  mainMarker = L.marker([8.3540066,124.8502529],{draggable:true}).addTo(map);
+  mainMarker.on('dragend',()=>{ $('coords').textContent=`Lat: ${mainMarker.getLatLng().lat.toFixed(4)}, Lng: ${mainMarker.getLatLng().lng.toFixed(4)}`; });
+  $('coords').textContent=`Lat: ${mainMarker.getLatLng().lat.toFixed(4)}, Lng: ${mainMarker.getLatLng().lng.toFixed(4)}`;
+
+  try {
+    if(latlngs.length === 1){ map.setView(latlngs[0], 15); }
+    else if(latlngs.length > 1){ map.fitBounds(latlngs, { padding:[40,40] }); }
+  } catch(e){ }
+
+  setTimeout(()=>{ if(map) map.invalidateSize(); }, 260);
+}
+
+/* Small map for selecting record location */
+function initSmallMap(){
+  if(smallMap){
+    try{ smallMap.remove(); } catch(e){}
+    smallMap = null; smallTempMarker = null;
+  }
+  smallMap = L.map('smallMap', { zoomControl: false }).setView([8.3540066,124.8502529],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(smallMap);
+
+  smallMap.on('click', function(e){
+    selectedLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+    if(smallTempMarker) smallMap.removeLayer(smallTempMarker);
+    smallTempMarker = L.marker(e.latlng).addTo(smallMap);
+    $('smallCoords').textContent = `Selected: ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+    $('addRec').disabled = false;
+  });
+
+  setTimeout(()=>{ if(smallMap) smallMap.invalidateSize(); }, 260);
+}
+
+document.querySelector('button[data-target="records"]').addEventListener('click', ()=>{ setTimeout(initSmallMap,200); });
+if(document.getElementById('records').style.display !== 'none'){ setTimeout(initSmallMap,200); }
+
+/* ===========================
+   Init App
+   =========================== */
+function initApp(user){
+  renderRecords();
+  updateChart();
+  // initialize maps after a short timeout to make sure UI has been laid out
+  setTimeout(()=>{ initSmallMap(); initMap(); },200);
+}
+
+/* ===========================
+   Weather (API)
+   =========================== */
+$('getWeatherBtn').addEventListener('click', ()=>{
+  const city = $('city').value.trim(); if(!city){ alert('Enter city'); return;}
+  fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`)
+    .then(res=>res.json()).then(data=>{
+      if(data.cod!='200'){ alert('City not found'); return;}
+      const list = data.list.filter((_,i)=>i%8===0);
+      const container = $('forecast'); container.innerHTML='';
+      list.forEach(d=>{
+        const div = document.createElement('div'); div.className='forecast-day';
+        div.innerHTML = `<strong>${new Date(d.dt*1000).toLocaleDateString('en-us',{weekday:'short'})}</strong>
+          <img src="https://openweathermap.org/img/wn/${d.weather[0].icon}.png" alt="">
+          <div>${d.main.temp.toFixed(1)}°C</div>
+          <div class="small">${d.weather[0].main}</div>`;
+        container.appendChild(div);
+      });
+    }).catch(()=>{ alert('Weather API error'); });
+});
+
+/* ===========================
+   Profile
+   =========================== */
+function updateProfile(){
+  const session = StorageManager.load('sessionUser');
+  if(!session) return;
+  const usr = User.fromJSON(session);
+  if(!usr) return;
+  $('profileUsername').value = usr.username;
+  $('profileEmail').value = usr.email;
+  $('profilePhone').value = usr.phone;
+  $('profileTotalRecords').textContent = records.length;
+  if(records.length > 0){
+    const cropCount = {};
+    records.forEach(r => { cropCount[r.crop] = (cropCount[r.crop]||0) + Number(r.qty); });
+    const maxCrop = Object.entries(cropCount).sort((a,b)=>b[1]-a[1])[0][0];
+    $('profileFavoriteCrop').textContent = `Most Sale Crop: ${maxCrop}`;
+  } else {
+    $('profileFavoriteCrop').textContent = 'Most Sale Crop: None';
+  }
+}
+
+/* ===========================
+   Utilities
+   =========================== */
+function escapeHtml(s){
+  return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+}
+
+/* ===========================
+   Boot: If session exists, open app
+   =========================== */
+(function boot(){
+  const session = StorageManager.load('sessionUser');
+  if(session){
+    // ensure user exists in memory
+    const u = User.fromJSON(session);
+    if(!users.find(x=>x.username===u.username)){
+      users.push(u);
+      StorageManager.save('farm_users', users.map(x=>x.toJSON()));
+    }
+    $('loginWrap').style.display='none';
+    $('appUI').style.display='block';
+    initApp(u);
+  } else {
+    $('loginWrap').style.display='flex';
+    $('appUI').style.display='none';
+  }
+})();
+
+/* default disable add button until location selected */
+$('addRec').disabled = true;
+
+</script>
+</body>
+</html>

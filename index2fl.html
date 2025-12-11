@@ -166,10 +166,7 @@ th { background: #f0f0f0; font-weight:600; }
           </select>
           <input id="qty" type="number" placeholder="Qty" style="max-width:100px; padding:6px;">
           <select id="unit" style="max-width:100px;">
-            <option value="kg">kg</option>
             <option value="plants">plants</option>
-            <option value="cobs">cobs</option>
-            <option value="bags">bags</option>
           </select>
           <button class="btn" id="addRec" style="padding:6px 10px;">Add</button>
         </div>
@@ -251,7 +248,7 @@ th { background: #f0f0f0; font-weight:600; }
 </div>
 
 <script>
-const API_KEY="5071a911a3c45022cb808bac524236b1";
+const API_KEY="5071a911a3c45022cb808bac524236b1"; //API KEY HERE
 function $(id){return document.getElementById(id);}
 let records=JSON.parse(localStorage.getItem('farm_records')||'[]');
 let users=JSON.parse(localStorage.getItem('farm_users')||'[]');

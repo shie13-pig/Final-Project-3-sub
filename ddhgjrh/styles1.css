@@ -1,0 +1,120 @@
+/* ============================
+   GLOBAL STYLES
+=============================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-image: url('bg.jpg');
+    background-size: cover;
+    background-attachment: fixed;
+}
+
+/* ============================
+   PANEL / SECTIONS
+=============================== */
+.panel {
+    background: #ffffffdd;
+    padding: 20px;
+    border-radius: 15px;
+    margin: 20px 0;
+    overflow: visible !important;
+}
+
+/* ============================
+   NAVIGATION
+=============================== */
+header {
+    padding: 15px;
+    background: #ffffffbb;
+    backdrop-filter: blur(6px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#mainNav button {
+    padding: 8px 14px;
+    margin-left: 5px;
+    border: none;
+    background: #d2e0d2;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#mainNav button.active {
+    background: #5b7f5b;
+    color: white;
+}
+
+/* ============================
+   MAP FIX  (IMPORTANT!!!)
+=============================== */
+#mapArea,
+#map,
+.leaflet-container {
+    width: 100%;
+    height: 420px !important;
+}
+
+#smallMap {
+    width: 100%;
+    height: 320px !important;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+
+/* Fix Leaflet tiles duplicating / shrinking */
+.leaflet-container {
+    overflow: hidden !important;
+}
+
+/* ============================
+   TABLE
+=============================== */
+.table-responsive {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+}
+
+/* ============================
+   INPUTS / BUTTONS
+=============================== */
+input, select {
+    padding: 8px;
+    border: 1px solid #666;
+    border-radius: 6px;
+}
+
+.btn {
+    padding: 8px 20px;
+    background: #244a24;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+}
+
+.btn:disabled {
+    background: #8a8a8a;
+}
+
+/* Coordinates small text */
+.coords-small {
+    margin-top: 5px;
+    color: #444;
+    font-size: 14px;
+}
