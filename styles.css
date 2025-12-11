@@ -1,7 +1,7 @@
 #bg-slideshow {
 position: fixed;
 inset: 0;
-z-index: -3; /* behind everything */
+z-index: -3;
 overflow: hidden;
 }
 .bg-slide {
@@ -31,17 +31,38 @@ pointer-events: none;
 --glass-border: rgba(0,0,0,0.08);
 --text:#0b1b10;
 }
-html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);font: size 40px;}
+/* Base Font and Body Responsiveness */
+html,body{
+    height:100%;
+    margin:0;
+    font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+    color:var(--text);
+    font-size: 16px;
+}
 body{position:relative;min-height:100vh;overflow-x:hidden;background:#fff;}
-.app { max-width:1200px; margin:18px auto; padding:18px; box-sizing:border-box; }
-/* header */
+
+/* Responsive App Container */
+.app { 
+    max-width:1200px; 
+    margin:18px auto; 
+    padding:18px; 
+    box-sizing:border-box; 
+}
+@media(max-width:480px) {
+    .app {
+        margin: 10px auto;
+        padding: 10px;
+    }
+}
+
+/* --- HEADER and NAVIGATION Optimization --- */
 header {
 display:flex;
 align-items:center;
 justify-content:space-between;
 gap:12px;
 margin-bottom:14px;
-flex-wrap:nowrap;
+flex-wrap:nowrap; 
 width:100%;
 }
 .brand {
@@ -49,84 +70,292 @@ font-weight:700;
 color:var(--green);
 font-size:20px;
 white-space:nowrap;
+flex-shrink: 0;
 }
+
+/* Navigation Buttons (Ensure good touch targets and flexibility) */
 nav {
 display:flex;
 gap:8px;
 align-items:center;
 flex-wrap:nowrap;
 white-space:nowrap;
+overflow-x: auto; /* Allows horizontal scrolling for many nav items */
+padding-bottom: 2px;
+-webkit-overflow-scrolling: touch;
 }
 nav button {
 background: transparent;
 color:var(--text);
 border:1px solid rgba(0,0,0,0.12);
-padding:6px 10px;
+padding:10px 12px; /* Optimized touch target size */
 border-radius:6px;
 cursor:pointer;
 font-weight:500;
 font-size:15px;
+flex-shrink: 0; 
+min-width: 80px; 
 }
 nav button.active { background: rgba(46,125,50,0.16); color:var(--green); border-color: rgba(46,125,50,0.22); }
+
+/* Mobile Header: Stack header and make nav buttons fill width */
+@media(max-width:480px) {
+    header {
+        flex-direction: column; 
+        align-items: flex-start;
+        gap: 8px;
+    }
+    nav {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap; /* Buttons can wrap to the next line */
+        gap: 6px;
+    }
+    nav button {
+        flex-grow: 1; /* Stretch buttons to fill space evenly */
+        min-width: unset;
+        width: auto;
+    }
+}
+
 /* panels and layout */
 .panel { background: var(--panel); border-radius:12px; padding:16px; border:1px solid var(--glass-border); margin-bottom:14px; font-size:18px; box-sizing:border-box; }
 #loginWrap { min-height: calc(100vh - 36px); display:flex; align-items:center; justify-content:center; }
 .login-card { width:100%; max-width:420px; padding:28px; border-radius:12px; background:var(--panel-strong); border:1px solid var(--glass-border); text-align:center; font-size:18px; box-sizing:border-box; }
+@media(max-width:420px) {
+    .login-card {
+        padding: 20px;
+        margin: 0 10px;
+    }
+}
 .login-card h2{ margin:6px 0 14px 0; color:var(--green); font-size:24px; }
 .login-card input { width:100%; padding:10px; margin:8px 0; border-radius:8px; border:1px solid rgba(0,0,0,0.12); background: #fff; color:var(--text); box-sizing:border-box; font-size:16px; }
-.btn { background:var(--green); color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; font-size:16px; }
-.btn.ghost { background:transparent; border:1px solid rgba(0,0,0,0.12); color:var(--text); font-size:16px; }
+
+/* General Action Buttons */
+.btn { 
+    background:var(--green); 
+    color:#fff; 
+    border:none; 
+    padding:10px 16px; 
+    border-radius:8px; 
+    cursor:pointer; 
+    font-weight:700; 
+    font-size:16px; 
+    width: auto;
+    box-sizing: border-box;
+    display: inline-block;
+    min-height: 44px; /* Ensure minimum click area */
+}
+.btn.ghost { 
+    background:transparent; 
+    border:1px solid rgba(0,0,0,0.12); 
+    color:var(--text); 
+    font-size:16px; 
+}
+@media(max-width:480px) {
+    /* Login/Form buttons fill width on small screens */
+    .login-card .btn {
+        width: 100%;
+        margin-top: 10px;
+        padding: 12px 16px; 
+    }
+}
+
 .small { font-size:14px; color:rgba(0,0,0,0.6); }
-.grid { display:grid; grid-template-columns: 1fr 360px; gap:14px; align-items:start; }
-@media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
-#chart-container{ width:100%; height:320px; }
+
+/* --- GRID LAYOUT Optimization --- */
+.grid { 
+    display:grid; 
+    grid-template-columns: 1fr 360px; 
+    gap:14px; 
+    align-items:start; 
+}
+@media(max-width:900px){ 
+    /* Switch to single column below 900px */
+    .grid{ 
+        grid-template-columns:1fr; 
+    } 
+}
+
+/* Charts and Maps Responsiveness */
+#chart-container{ 
+    width:100%; 
+    height:320px; 
+    max-height: 40vh;
+}
 #chart-container canvas{ width:100% !important; height:100% !important; }
-/* maps */
 #map { width:100%; height:380px; border-radius:10px; margin-top:12px; }
 #coords { margin-top:6px; font-size:16px; color: rgba(0,0,0,0.6); }
-/* small map */
 #smallMap { width:100%; height:280px; border-radius:8px; margin-top:12px; }
-/* weather */
-#weather-input { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
-#weather-input input { padding:8px; border-radius:6px; border:1px solid rgba(0,0,0,0.12); background:#fff; color:var(--text); min-width:180px; font-size:16px; }
-#forecast { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
-.forecast-day { background: #fff; padding:10px; border-radius:10px; min-width:110px; text-align:center; font-size:14px; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+
+/* weather input/buttons Responsiveness */
+#weather-input { 
+    display:flex; 
+    gap:8px; 
+    justify-content:center; 
+    flex-wrap:wrap; 
+    margin-top:12px; 
+}
+#weather-input input { 
+    flex-grow: 1; 
+    max-width: 300px;
+    padding:8px; 
+    border-radius:6px; 
+    border:1px solid rgba(0,0,0,0.12); 
+    background:#fff; 
+    color:var(--text); 
+    min-width:180px; 
+    font-size:16px; 
+}
+#weather-input .btn {
+    flex-shrink: 0; 
+}
+@media(max-width:480px) {
+    /* Weather input elements stack vertically and fill width */
+    #weather-input input {
+        min-width: 100%;
+        max-width: 100%;
+    }
+    #weather-input .btn {
+        width: 100%;
+    }
+}
+
+#forecast { 
+    display:flex; 
+    gap:12px; 
+    justify-content:flex-start; 
+    flex-wrap:wrap; 
+    margin-top:12px; 
+}
+.forecast-day { 
+    background: #fff; 
+    padding:10px; 
+    border-radius:10px; 
+    min-width:110px; 
+    text-align:center; 
+    font-size:14px; 
+    color:var(--text); 
+    box-shadow:0 1px 3px rgba(0,0,0,0.06); 
+    flex: 1 1 calc(20% - 10px); 
+}
+@media(max-width:768px) {
+    .forecast-day { 
+        flex: 1 1 calc(33.33% - 8px); 
+    }
+}
+@media(max-width:480px) {
+    .forecast-day { 
+        flex: 1 1 calc(50% - 6px); 
+        min-width: unset;
+    }
+}
 .forecast-day img{ width:50px; height:50px; display:block; margin:4px auto; }
-.table-responsive { width: 100%; overflow-x: auto; margin-top:10px; }
-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); min-width: 400px; font-size:16px;
+
+/* Table Responsiveness */
+.table-responsive { 
+    width: 100%; 
+    overflow-x: auto; /* Key for table responsiveness */
+    margin-top:10px; 
+    padding-bottom: 5px; 
 }
-th, td { padding: 8px; text-align: center; border-bottom: 1px dashed rgba(0,0,0,0.08); color: #000; background: #fff; font-size:15px; }
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    background: #fff; 
+    border-radius: 8px; 
+    overflow: hidden; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); 
+    min-width: 600px; /* Forces horizontal scrolling on small screens */
+    font-size:16px;
+}
+th, td { padding: 8px; text-align: center; border-bottom: 1px dashed rgba(0,0,0,0.08); color: #000; font-size:15px; } 
 th { background: #f6f6f6; font-weight:600; }
-#records select, #records input { padding:6px 8px; font-size:15px; border-radius:6px; border:1px solid rgba(0,0,0,0.12); background:#fff; color:var(--text); }
-#records button#addRec { font-size:15px; padding:6px 10px; }
-.coords-small { margin-top:8px; font-size:14px; color:rgba(0,0,0,0.7); }
-/* responsiveness tweaks */
-@media(max-width:600px){
-#chart-container { height:260px; }
-#map { height:220px; }
-#smallMap { height:200px; }
+
+/* Table action buttons */
+td .btn {
+    padding: 6px 10px; 
+    font-size: 14px;
+    font-weight: 500;
+    min-height: 38px;
 }
+
+/* Records Input Fields and Buttons Responsiveness */
+#records {
+    display: flex;
+    flex-wrap: wrap; 
+    gap: 10px;
+    align-items: center;
+}
+#records select, 
+#records input { 
+    flex-grow: 1; 
+    min-width: 120px;
+    padding:8px 10px; 
+    font-size:15px; 
+    border-radius:6px; 
+    border:1px solid rgba(0,0,0,0.12); 
+    background:#fff; 
+    color:var(--text); 
+    box-sizing: border-box;
+}
+#records button#addRec { 
+    flex-shrink: 0; 
+    font-size:15px; 
+    padding:10px 12px; 
+}
+@media(max-width:480px) {
+    /* Stack form elements vertically on mobile */
+    #records {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    #records select, 
+    #records input,
+    #records button#addRec {
+        min-width: 100%;
+        width: 100%;
+    }
+}
+
+.coords-small { margin-top:8px; font-size:14px; color:rgba(0,0,0,0.7); }
+
+/* responsiveness tweaks for map/chart heights */
+@media(max-width:600px){
+    #chart-container { 
+        height:260px; 
+    }
+    #map { 
+        height:220px; 
+    }
+    #smallMap { 
+        height:200px; 
+    }
+}
+
 /* small utility */
 .hidden { display:none !important; }
-/* ANIMATION */
+
+/* ANIMATION (No changes needed) */
 @keyframes floatUpCenter {
 0% {
 opacity: 0;
-transform: translateY(40px); /* start lower */
+transform: translateY(40px);
 }
 50% {
 opacity: 1;
-transform: translateY(-6px); /* float effect */
+transform: translateY(-6px);
 }
 100% {
 opacity: 1;
-transform: translateY(0); /* final center */
+transform: translateY(0);
 }
 }
 .hero-animate {
 animation: floatUpCenter 2.2s ease-out forwards;
 }
-/* FULL SCREEN CENTERED HOME SECTION */
+
+/* --- FULL SCREEN CENTERED HOME SECTION Responsiveness --- */
 #home.fullscreen-center {
 position: relative;
 display: flex;
@@ -138,6 +367,21 @@ height: 100vh;
 background: transparent;
 padding-top: 120px;
 }
+
+/* Responsive font sizes and padding for the main hero section */
+@media(max-width:600px) {
+    #home.fullscreen-center {
+        padding-top: 60px; 
+    }
+    #home.fullscreen-center h1 {
+        font-size: 40px; 
+    }
+    #home.fullscreen-center p {
+        font-size: 18px; 
+        padding: 0 10px;
+    }
+}
+
 #home.fullscreen-center h1 {
 font-size: 56px;
 margin-bottom: 10px;
