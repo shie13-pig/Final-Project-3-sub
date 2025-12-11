@@ -1,159 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Farm System — Full Features</title>
-
-<!-- External CSS -->
-<link rel="stylesheet" href="style1.css">
-
-<!-- Chart.js -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Farm System — Full Features (Map + Popups + Slideshow)</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
-<div class="app">
-
-  <!-- Login / Signup -->
-  <div id="loginWrap">
-    <div class="login-card panel" id="loginCard">
-      <h2>Farm System</h2>
-      <p class="small" id="loginModeText">Please sign in to access the app</p>
-
-      <input id="user" autocomplete="username" placeholder="Username" />
-      <input id="pass" type="password" autocomplete="current-password" placeholder="Password" />
-      <input id="email" type="email" placeholder="Email (for Sign Up)" style="display:none;">
-      <input id="phone" placeholder="Phone (for Sign Up)" style="display:none;">
-
-      <div style="display:flex; gap:8px; margin-top:10px;">
-        <button class="btn" id="loginBtn">Login</button>
-        <button class="btn ghost" id="signupToggleBtn">Sign Up</button>
-      </div>
-      <p id="loginErr" style="color:#fcc; margin-top:10px; display:none;"></p>
-    </div>
-  </div>
-
-  <!-- Main UI -->
-  <div id="appUI" style="display:none;">
-    <header>
-      <div class="brand">Agroguide: Farmer's Guideline</div>
-
-      <nav id="mainNav">
-        <button data-target="home" class="active">Home</button>
-        <button data-target="dashboard">Dashboard</button>
-        <button data-target="map">Map</button>
-        <button data-target="weather">Weather</button>
-        <button data-target="records">Records</button>
-        <button data-target="guidelines">Farmer Guidelines</button>
-        <button data-target="profile">Profile</button>
-      </nav>
-    </header>
-
-    <main>
-
-      <!-- HOME -->
-      <section id="home" class="panel" style="display:block;">
-        <h2>Welcome Farmers!</h2>
-        <p class="small">Manage crops, view map & weather, and track harvest records.</p>
-      </section>
-
-      <!-- DASHBOARD -->
-      <section id="dashboard" class="panel" style="display:none;">
-        <div class="grid">
-          <div id="chart-container" class="panel">
-            <canvas id="myChart"></canvas>
-          </div>
-          <div class="panel">
-            <h3>Quick Info</h3>
-            <p>Total Records: <span id="totalRecords">0</span></p>
-          </div>
-        </div>
-      </section>
-
-      <!-- MAP -->
-      <section id="map" class="panel" style="display:none;">
-        <h2>Farm Location</h2>
-        <div id="mapArea"></div>
-        <div id="coords"></div>
-      </section>
-
-      <!-- WEATHER -->
-      <section id="weather" class="panel" style="display:none;">
-        <h2>Weather Forecast</h2>
-        <div id="weather-input">
-          <input id="city" placeholder="Enter city or country">
-          <button class="btn" id="getWeatherBtn">Get Forecast</button>
-        </div>
-        <div id="forecast"></div>
-      </section>
-
-      <!-- RECORDS -->
-      <section id="records" class="panel" style="display:none;">
-        <h2>Crop Records</h2>
-
-        <div class="input-row">
-          <select id="crop">
-            <option value="">Crop</option>
-            <option>Corn</option>
-            <option>Tomato</option>
-            <option>Lettuce</option>
-            <option>Carrot</option>
-          </select>
-
-          <input id="qty" type="number" placeholder="Qty">
-          <select id="unit"><option>plants</option></select>
-
-          <button class="btn" id="addRec" disabled>Add</button>
-        </div>
-
-        <div id="smallMap"></div>
-        <div id="smallCoords" class="coords-small">No location selected.</div>
-
-        <div class="table-responsive">
-          <table>
-            <thead>
-              <tr><th>Crop</th><th>Qty</th><th>Unit</th><th>Lat</th><th>Lng</th><th>Action</th></tr>
-            </thead>
-            <tbody id="list"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- GUIDELINES -->
-      <section id="guidelines" class="panel" style="display:none;">
-        <h2>Farming Guidelines</h2>
-        <p>Monthly tips for soil, crops, and pests.</p>
-        <div class="table-responsive">
-          <table>
-            <thead><tr><th>Month</th><th>Best Crops</th><th>Soil Tips</th><th>Pesticides</th></tr></thead>
-            <tbody>
-              <tr><td>Jan</td><td>Corn, Lettuce</td><td>Compost soil</td><td>Neem oil</td></tr>
-              <tr><td>Feb</td><td>Tomato</td><td>Neutral pH</td><td>Insecticides</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- PROFILE -->
-      <section id="profile" class="panel" style="display:none;">
-        <h2>User Profile</h2>
-        <p>Total Crop Records: <span id="profileTotalRecords">0</span></p>
-        <p id="profileFavoriteCrop">Most Sale Crop: None</p>
-        <button class="btn" onclick="doLogout()">Logout</button>
-      </section>
-
-    </main>
-  </div>
-
+<div id="bg-slideshow" aria-hidden="true">
+<div id="bg1" class="bg-slide"></div>
+<div id="bg2" class="bg-slide"></div>
 </div>
-
-<!-- External JS -->
+<div id="bg-overlay" aria-hidden="true"></div>
+<div class="app">
+<div id="loginWrap">
+<div class="login-card panel" id="loginCard">
+<h2>Agroguide</h2>
+<p class="small" id="loginModeText">Please sign in to access the app</p>
+<input id="user" autocomplete="username" placeholder="Username" />
+<input id="pass" type="password" autocomplete="current-password" placeholder="Password" />
+<input id="email" type="email" placeholder="Email (for Sign Up)" style="display:none;" />
+<input id="phone" placeholder="Phone (for Sign Up)" style="display:none;" />
+<div style="display:flex; gap:8px; margin-top:10px; justify-content:center;">
+<button class="btn" id="loginBtn">Login</button>
+<button class="btn ghost" id="signupToggleBtn">Sign Up</button>
+</div>
+<p id="loginErr" style="color:#fcc; margin-top:10px; display:none;"></p>
+</div>
+</div>
+<div id="appUI" style="display:none;">
+<header>
+<div class="brand">Agroguide: Farmer's Guideline</div>
+<nav id="mainNav">
+<button data-target="home" class="active">Home</button>
+<button data-target="dashboard">Dashboard</button>
+<button data-target="map">Map</button>
+<button data-target="weather">Weather</button>
+<button data-target="records">Records</button>
+<button data-target="guidelines">Farmer Guidelines</button>
+<button data-target="profile">Profile</button>
+</nav>
+</header>
+<main>
+<section id="home" class="panel fullscreen-center" style="display:block;">
+<h1 class="hero-animate">Welcome Farmers!</h1>
+<p class="small hero-animate">
+Manage crops, view farming guidelines, mark farm locations on the map,
+check weather, and track harvest records — all in one simple dashboard.
+</p>
+</section>
+<section id="dashboard" class="panel" style="display:none;">
+<div class="grid" style="margin-top:12px;">
+<div id="chart-container" class="panel">
+<canvas id="myChart"></canvas>
+</div>
+<div class="panel" style="min-height:320px;">
+<h3 style="margin:0 0 8px 0;">Quick Info</h3>
+<p class="small">Records stored locally. Chart auto-updates.</p>
+<div style="margin-top:12px;">
+<strong>Total Records:</strong> <span id="totalRecords">0</span>
+</div>
+</div>
+</div>
+</section>
+<section id="map" class="panel" style="display:none;">
+<h2>Farm Location</h2>
+<div id="map"></div>
+<div id="coords"></div>
+</section>
+<section id="weather" class="panel" style="display:none;">
+<h2>Weather Forecast</h2>
+<div id="weather-input">
+<input id="city" placeholder="Enter city or country">
+<button class="btn" id="getWeatherBtn">Get Forecast</button>
+</div>
+<div id="forecast"></div>
+</section>
+<section id="records" class="panel" style="display:none;">
+<h2>Crop Records (CRUD)</h2>
+<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:8px; align-items:center;">
+<select id="crop" style="max-width:160px;">
+<option value="">Select Crop</option>
+<option>Corn</option>
+<option>Tomato</option>
+<option>Lettuce</option>
+<option>Carrot</option>
+<option>Pumpkin</option>
+<option>Beans</option>
+<option>Spinach</option>
+<option>Chili</option>
+<option>Eggplant</option>
+<option>Okra</option>
+<option>Cabbage</option>
+</select>
+<input id="qty" type="number" placeholder="Qty" style="max-width:100px; padding:6px;">
+<input id="datePlanted" type="date" style="max-width:170px; padding:6px;" title="Date planted (optional)">
+<select id="unit" style="max-width:100px;">
+<option value="plants">plants</option>
+</select>
+<button class="btn" id="addRec" style="padding:6px 10px;" disabled>Add</button>
+</div>
+<div id="smallMap"></div>
+<div id="smallCoords" class="coords-small">No location selected. Click on the map to choose where to plant.</div>
+<div class="table-responsive">
+<table>
+<thead><tr><th>Crop</th><th>Quantity</th><th>Date</th><th>Unit</th><th>Lat</th><th>Lng</th><th>Action</th></tr></thead>
+<tbody id="list"></tbody>
+</table>
+</div>
+</section>
+<section id="guidelines" class="panel" style="display:none;">
+<h2>Farming Guidelines</h2>
+<p class="small">Tips for best crops, soil health, and pest management by month.</p>
+<div class="table-responsive">
+<table>
+<thead>
+<tr>
+<th>Month</th>
+<th>Best Crops</th>
+<th>Soil Tips</th>
+<th>Pesticides / Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>Jan</td><td>Corn, Lettuce, Carrot</td><td>Well-drained, compost-rich soil</td><td>Neem oil</td></tr>
+<tr><td>Feb</td><td>Tomato, Cucumber, Spinach</td><td>Neutral pH, avoid waterlogging</td><td>Organic insecticides</td></tr>
+<tr><td>Mar</td><td>Pumpkin, Beans, Radish</td><td>Fertile, loose soil</td><td>Check aphids</td></tr>
+<tr><td>Apr</td><td>Chili, Eggplant, Lettuce</td><td>Mix compost & mulch</td><td>Natural fungicides</td></tr>
+<tr><td>May</td><td>Okra, Corn, Cucumber</td><td>Maintain moisture</td><td>Rotate crops</td></tr>
+<tr><td>Jun</td><td>Rice, Tomato, Beans</td><td>Rich nitrogen, good drainage</td><td>Organic fertilizers</td></tr>
+<tr><td>Jul</td><td>Cabbage, Lettuce, Carrot</td><td>pH 6-7, aerated soil</td><td>Monitor pests</td></tr>
+<tr><td>Aug</td><td>Pumpkin, Chili, Eggplant</td><td>Fertile, well-drained</td><td>Neem or garlic spray</td></tr>
+<tr><td>Sep</td><td>Spinach, Beans, Radish</td><td>Add compost, keep moist</td><td>Watch fungus</td></tr>
+<tr><td>Oct</td><td>Corn, Cucumber, Tomato</td><td>Loamy soil, rotate crops</td><td>Organic insecticides</td></tr>
+<tr><td>Nov</td><td>Carrot, Lettuce, Pumpkin</td><td>Rich, loose soil</td><td>Natural pest deterrents</td></tr>
+<tr><td>Dec</td><td>Beans, Spinach, Cabbage</td><td>Mix compost, avoid clay</td><td>Rotate crops, monitor pests</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="profile" class="panel" style="display:none;">
+<h2>User Profile</h2>
+<div style="display:flex; flex-wrap:wrap; gap:20px;">
+<div style="flex:1; min-width:200px; text-align:center;">
+<img id="profilePic" src="Sunny cornfield.png" alt="Profile Picture" style="border-radius:50%; width:150px; height:150px; object-fit:cover; border:2px solid var(--green);">
+</div>
+<div style="flex:2; min-width:250px;">
+<h3>Personal Information</h3>
+<div style="margin-bottom:12px;">
+<label>Username:</label><br>
+<input type="text" id="profileUsername" value="" style="width:100%; padding:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.12);">
+</div>
+<div style="margin-bottom:12px;">
+<label>Email:</label><br>
+<input type="email" id="profileEmail" value="" style="width:100%; padding:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.12);">
+</div>
+<div style="margin-bottom:12px;">
+<label>Phone:</label><br>
+<input type="text" id="profilePhone" value="" style="width:100%; padding:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.12);">
+</div>
+<div style="margin-top:20px;">
+<button class="btn" onclick="doLogout()">Logout</button>
+</div>
+</div>
+</div>
+<div style="margin-top:20px;">
+<h3>Account Summary</h3>
+<p>Total Crop Records: <span id="profileTotalRecords">0</span></p>
+<p id="profileFavoriteCrop">Most Sale Crop: None</p>
+</div>
+</section>
+</main>
+</div>
+</div>
 <script src="script.js"></script>
-
 </body>
 </html>
